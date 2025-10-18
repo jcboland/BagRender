@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Fabric Bag Preview</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #upload-controls {
+      margin: auto;
+      top: 10px;
+      left: 10px;
+      background: rgba(255,255,255,0.9);
+      padding: 10px;
+      z-index: 10;
+      border-radius: 4px;
+      font-family: sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div id="upload-controls">
+    <label>Replace Fabric Image:
+      <input type="file" id="img-input" accept="image/*" />
+    </label>
+  </div>
+  <canvas id="c"></canvas>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js",
+        "three/examples/jsm/loaders/OBJLoader.js": "https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/loaders/OBJLoader.js",
+        "three/examples/jsm/controls/OrbitControls.js": "https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/controls/OrbitControls.js"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+    import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+
+    let camera, scene, renderer, controls;
+    let objMesh = null;
+    let defaultTexture = null;
+
+      // const objURL = 'FeedbagOBJ.obj';
+      // const textureURL = 'Donut.png';
+      let objURL = 'https://wompatuck-prints.s3.us-west-1.amazonaws.com/render/FeedbagOBJ.obj';
+      let textureURL = 'https://wompatuck-prints.s3.us-west-1.amazonaws.com/render/Donut.png';
+      
+    init();
+    loadModelWithDefaultTexture();
+
+    function init() {
+      const canvas = document.getElementById('c');
+
+      renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xf0f0f0);
+
+      camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 0, 5);
+
+      controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+
+      scene.add(new THREE.AmbientLight(0x404040));
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+      dirLight.position.set(5, 10, 7);
+      scene.add(dirLight);
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      document.getElementById('img-input').addEventListener('change', handleImageUpload);
+
+      animate();
+    }
+
+    function loadModelWithDefaultTexture() {
+
+
+        const loader = new OBJLoader();
+        const texLoader = new THREE.TextureLoader();
+
+        texLoader.load(textureURL, texture => {
+          // ✅ store a reference if you want to reuse it later
+          const fabricTexture = texture;
+          fabricTexture.wrapS = fabricTexture.wrapT = THREE.RepeatWrapping;
+          fabricTexture.repeat.set(1, 1);
+          fabricTexture.flipY = true;
+
+          loader.load(objURL, obj => {
+            const targetBlackParts = ["Pattern_25179", "Pattern_25178", "Pattern_4474", "Pattern_25179"];
+            const targetWhiteParts = ["Pattern_304806", "Pattern_157054", "Pattern_157053", "Pattern_700495"];
+            
+
+            obj.traverse(child => {
+              //console.log('Part:', child.name);
+              if (child.isMesh) {
+                if (targetBlackParts.includes(child.name)) {
+                  // ✅ use the texture defined above
+                  child.material = new THREE.MeshStandardMaterial({ map: fabricTexture });
+                }
+                else if(targetWhiteParts.includes(child.name)){
+                  child.material = new THREE.MeshStandardMaterial({ color: 0xeeeeee });
+                  
+                }
+                else {
+                  child.material = new THREE.MeshStandardMaterial({ color: 0x000000 });
+                }
+              }
+            });
+
+         // Center camera on model
+          const bbox = new THREE.Box3().setFromObject(obj);
+          const center = bbox.getCenter(new THREE.Vector3());
+          const size = bbox.getSize(new THREE.Vector3());
+          const maxDim = Math.max(size.x, size.y, size.z);
+          const fitDist = maxDim * 1.5;
+
+          camera.position.set(center.x, center.y, center.z + fitDist);
+          camera.lookAt(center);
+          controls.target.copy(center);
+          controls.update();
+
+            // ✅ Add to scene etc.
+            scene.add(obj);
+          });
+        });
+
+      // const loader = new OBJLoader();
+      // const texLoader = new THREE.TextureLoader();
+
+      // texLoader.load(textureURL, texture => {
+      //   defaultTexture = texture;
+      //   texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      //   texture.repeat.set(1, 1);
+      //   texture.flipY = false;
+
+      //   loader.load(objURL, obj => {
+      //     const targetParts = ["Pattern_25179", "Pattern_25178"];
+
+      //     obj.traverse(child => {
+      //       console.log('Part:', child.name);
+      //       if (child.isMesh) {
+      //         if (targetParts.includes(child.name)) {
+      //           child.material = new THREE.MeshStandardMaterial({ map: fabricTexture });
+      //         } else {
+      //           child.material = new THREE.MeshStandardMaterial({ color: 0xeeeeee });
+      //         }
+      //       }
+      //     });
+
+          
+
+      //     // Center camera on model
+      //     const bbox = new THREE.Box3().setFromObject(obj);
+      //     const center = bbox.getCenter(new THREE.Vector3());
+      //     const size = bbox.getSize(new THREE.Vector3());
+      //     const maxDim = Math.max(size.x, size.y, size.z);
+      //     const fitDist = maxDim * 1.5;
+
+      //     camera.position.set(center.x, center.y, center.z + fitDist);
+      //     camera.lookAt(center);
+      //     controls.target.copy(center);
+      //     controls.update();
+
+      //     scene.add(obj);
+      //   });
+      // });
+
+      
+    }
+
+    function handleImageUpload(event) {
+      console.log("Image Upload");
+      const file = event.target.files[0];
+      //if (!file || !objMesh) return;
+
+      // const url = URL.createObjectURL(file);
+      // const loader = new THREE.TextureLoader();
+
+      // loader.load(url, texture => {
+      //   texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      //   texture.repeat.set(1, 1);
+      //   texture.flipY = false;
+
+      //   objMesh.material.map = texture;
+      //   objMesh.material.needsUpdate = true;
+
+
+        
+      // });
+        
+        const loader = new OBJLoader();
+        const url = URL.createObjectURL(file);
+        console.log("Loading " + url);
+        const texLoader = new THREE.TextureLoader();
+
+        texLoader.load(url, texture => {
+          // ✅ store a reference if you want to reuse it later
+          const fabricTexture = texture;
+          fabricTexture.wrapS = fabricTexture.wrapT = THREE.RepeatWrapping;
+          fabricTexture.repeat.set(1, 1);
+          fabricTexture.flipY = true;
+
+          loader.load(objURL, obj => {
+            const targetBlackParts = ["Pattern_25179", "Pattern_25178", "Pattern_4474"];
+            const targetWhiteParts = ["Pattern_304806", "Pattern_157054", "Pattern_157053", "Pattern_700495"];
+            
+
+            obj.traverse(child => {
+              //console.log('Part:', child.name);
+              if (child.isMesh) {
+                if (targetBlackParts.includes(child.name)) {
+                  // ✅ use the texture defined above
+                  child.material = new THREE.MeshStandardMaterial({ map: fabricTexture });
+                }
+                else if(targetWhiteParts.includes(child.name)){
+                  child.material = new THREE.MeshStandardMaterial({ color: 0xeeeeee });
+                  
+                }
+                else {
+                  child.material = new THREE.MeshStandardMaterial({ color: 0x000000 });
+                }
+              }
+            });
+
+         // Center camera on model
+          const bbox = new THREE.Box3().setFromObject(obj);
+          const center = bbox.getCenter(new THREE.Vector3());
+          const size = bbox.getSize(new THREE.Vector3());
+          const maxDim = Math.max(size.x, size.y, size.z);
+          const fitDist = maxDim * 1.5;
+
+          camera.position.set(center.x, center.y, center.z + fitDist);
+          camera.lookAt(center);
+          controls.target.copy(center);
+          controls.update();
+
+            // ✅ Add to scene etc.
+            scene.add(obj);
+          });
+        });
+
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+  </script>
+</body>
+</html>

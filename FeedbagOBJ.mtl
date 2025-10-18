@@ -1,0 +1,135 @@
+# MTL Exporter v1.0 by Seungwoo Oh at CLO - Virtual Fashion Inc.
+newmtl Nylon_Canvas_FRONT_2402
+Ka 0.257132 0.257132 0.257132
+Kd 1.000000 1.000000 1.000000
+Ks 0.075000 0.075000 0.075000
+Ns 28.763239
+illum 2
+d 1.000000
+map_Ka C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/baked_texture_ZGrzQeTNlVeE.jpg
+map_Kd C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/baked_texture_ZGrzQeTNlVeE.jpg
+map_bump C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/Nylon_Canvas_FCL2PSN003_test11_NRM.jpg
+map_bump C:/Users/jcbol/AppData/Local/CLO/CLO Standalone OnlineAuth/39508/1067/Nylon_Canvas_FCL2PSN003_test11_NRM_75.jpg
+newmtl Silk_Duchess_Satin_FRONT_2410
+Ka 0.257132 0.257132 0.257132
+Kd 1.000000 1.000000 1.000000
+Ks 0.487500 0.487500 0.487500
+Ns 64.000000
+illum 2
+d 1.000000
+map_Ka C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/Silk_Duchess_Satin_FCL1PSS003_test1_COL.jpg
+map_Kd C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/Silk_Duchess_Satin_FCL1PSS003_test1_COL.jpg
+map_bump C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/Silk_Duchess_Satin_FCL1PSS003_test1_NRM.jpg
+map_bump C:/Users/jcbol/AppData/Local/CLO/CLO Standalone OnlineAuth/39508/1068/Silk_Duchess_Satin_FCL1PSS003_test1_NRM_50.jpg
+newmtl Material824931
+Ka 0.257132 0.257132 0.257132
+Kd 1.000000 1.000000 1.000000
+Ks 0.075000 0.075000 0.075000
+Ns 28.763239
+illum 2
+d 1.000000
+map_Ka C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/singstitch01_2092.jpg
+map_Kd C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/singstitch01_2092.jpg
+newmtl Material3322
+Ka 0.033276 0.033276 0.033276
+Kd 0.129412 0.129412 0.129412
+Ks 0.420000 0.420000 0.420000
+Ns 83.552750
+illum 2
+d 1.000000
+newmtl Knit_Terry_FRONT_453204
+Ka 0.257132 0.257132 0.257132
+Kd 1.000000 1.000000 1.000000
+Ks 0.075000 0.075000 0.075000
+Ns 28.763239
+illum 2
+d 1.000000
+map_Ka C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/baked_texture_09rksnA6KezH.jpg
+map_Kd C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/baked_texture_09rksnA6KezH.jpg
+map_bump C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/Terry_FCL1PSK005_2_test2_NRM.jpg
+map_bump C:/Users/jcbol/AppData/Local/CLO/CLO Standalone OnlineAuth/39508/1069/Terry_FCL1PSK005_2_test2_NRM_50.jpg
+newmtl Material3320
+Ka 0.257132 0.257132 0.257132
+Kd 1.000000 1.000000 1.000000
+Ks 0.900000 0.900000 0.900000
+Ns 128.000000
+illum 2
+d 1.000000
+newmtl Material3321
+Ka 0.043359 0.043359 0.043359
+Kd 0.168627 0.168627 0.168627
+Ks 0.420000 0.420000 0.420000
+Ns 83.552750
+illum 2
+d 1.000000
+newmtl Material1452
+Ka 0.257132 0.257132 0.257132
+Kd 1.000000 1.000000 1.000000
+Ks 0.075000 0.075000 0.075000
+Ns 28.763239
+illum 2
+d 1.000000
+map_Ka C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/Basic_Offset_2080.png
+map_Kd C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/Basic_Offset_2080.png
+newmtl Rib_2X2_468gsm_Copy_1_FRONT_2426
+Ka 0.257132 0.257132 0.257132
+Kd 1.000000 1.000000 1.000000
+Ks 0.075000 0.075000 0.075000
+Ns 28.763239
+illum 2
+d 1.000000
+map_Ka C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/baked_texture_VYdeN4N4JAmc.jpg
+map_Kd C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/baked_texture_VYdeN4N4JAmc.jpg
+map_bump C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/Grey_Rib_NRM.jpg
+map_bump C:/Users/jcbol/AppData/Local/CLO/CLO Standalone OnlineAuth/39508/1070/Grey_Rib_NRM_70.jpg
+newmtl Knit_Cotton_Jersey_FRONT_2443
+Ka 0.257132 0.257132 0.257132
+Kd 1.000000 1.000000 1.000000
+Ks 0.088500 0.088500 0.088500
+Ns 46.477551
+illum 2
+d 1.000000
+map_Ka C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/Cotton_Jersey_FCL1PSK006_3_test8_COL.jpg
+map_Kd C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/Cotton_Jersey_FCL1PSK006_3_test8_COL.jpg
+map_bump C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/Cotton_Jersey_FCL1PSK006_3_test8_NRM.jpg
+map_bump C:/Users/jcbol/AppData/Local/CLO/CLO Standalone OnlineAuth/39508/1071/Cotton_Jersey_FCL1PSK006_3_test8_NRM_50.jpg
+newmtl Rib_2X2_468gsm_FRONT_2417
+Ka 0.257132 0.257132 0.257132
+Kd 1.000000 1.000000 1.000000
+Ks 0.075000 0.075000 0.075000
+Ns 28.763239
+illum 2
+d 1.000000
+map_Ka C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/baked_texture_VYdeN4N4JAmc.jpg
+map_Kd C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/baked_texture_VYdeN4N4JAmc.jpg
+map_bump C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/Grey_Rib_NRM.jpg
+map_bump C:/Users/jcbol/AppData/Local/CLO/CLO Standalone OnlineAuth/39508/1072/Grey_Rib_NRM_70.jpg
+newmtl CDP_PUCKLE_MESH_FRONT_2435
+Ka 0.257132 0.257132 0.257132
+Kd 1.000000 1.000000 1.000000
+Ks 0.045000 0.045000 0.045000
+Ns 9.901810
+illum 2
+d 1.000000
+map_Ka C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/tex and opa.png
+map_Kd C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/tex and opa.png
+map_bump C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/Cotton_Jersey_FCL1PSK006_3_test8_NRM_685350.jpg
+map_bump C:/Users/jcbol/AppData/Local/CLO/CLO Standalone OnlineAuth/39508/1073/Cotton_Jersey_FCL1PSK006_3_test8_NRM_685350_100.jpg
+newmtl Material742153
+Ka 0.257132 0.257132 0.257132
+Kd 1.000000 1.000000 1.000000
+Ks 0.075000 0.075000 0.075000
+Ns 28.763239
+illum 2
+d 1.000000
+map_Ka C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/singstitch01_2092.jpg
+map_Kd C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/singstitch01_2092.jpg
+newmtl Material751111
+Ka 0.257132 0.257132 0.257132
+Kd 1.000000 1.000000 1.000000
+Ks 0.075000 0.075000 0.075000
+Ns 28.763239
+illum 2
+d 1.000000
+map_Ka C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/singstitch01_2092.jpg
+map_Kd C:/Users/jcbol/OneDrive/Documents/Personal/Projects/AutoBag/AutobagV2Refresh/Fabric Render/singstitch01_2092.jpg
