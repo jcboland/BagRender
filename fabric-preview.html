@@ -19,7 +19,7 @@
 
     /* Left Panel - 2D Fabric Positioning */
     #left-panel {
-      width: 50%;
+      width: 30%;
       background: #f5f5f5;
       display: flex;
       flex-direction: column;
@@ -92,15 +92,15 @@
     }
 
     .toggle-btn.active {
-      background: #007bff;
+      background: #507CBC;
       color: white;
-      border-color: #007bff;
+      border-color: #507CBC;
     }
 
     #generate-btn {
       width: 100%;
       padding: 12px 20px;
-      background: #28a745;
+      background: #507CBC;
       color: white;
       border: none;
       border-radius: 6px;
@@ -153,7 +153,7 @@
 
     /* Right Panel - 3D Preview */
     #right-panel {
-      width: 50%;
+      width: 70%;
       position: relative;
       background: #f0f0f0;
     }
@@ -170,25 +170,25 @@
     <!-- Left Panel: 2D Fabric Positioning -->
     <div id="left-panel">
       <div id="controls-header">
-        <h2>Fabric Positioning</h2>
+        <h1>Fabric Positioning</h2>
 
         <div class="panel-section">
-          <h3>Panel Selection</h3>
+          <h2>Panel Selection</h3>
           <div id="panel-toggle-buttons">
-            <button class="toggle-btn active" data-panel="external">External Panel</button>
-            <button class="toggle-btn" data-panel="bottom">Bottom Panel</button>
+            <button class="toggle-btn active" data-panel="external" >External Panel</button>
+            <button class="toggle-btn" data-panel="bottom" >Bottom Panel</button>
           </div>
         </div>
 
         <div class="panel-section">
-          <h3 id="current-panel-name">External Panel (Pattern_25178)</h3>
+          <h2 id="current-panel-name">External Panel</h3>
           <div class="file-input-wrapper">
             <label>Upload Image:</label>
             <input type="file" id="fabric-img-input" accept="image/*" />
           </div>
         </div>
 
-        <button id="generate-btn">Generate 3D Preview</button>
+        <button id="generate-btn" >Generate 3D Preview</button>
       </div>
 
       <div id="canvas-container">
@@ -293,10 +293,11 @@
         svgWidth: 900,
         svgHeight: 550,
         clipPath: null,
+        outlinePath: null,
         displayScale: 1,
         displayOffsetX: 0,
         displayOffsetY: 0,
-        label: 'External Panel (Pattern_25178)'
+        label: 'External Panel'
       },
       bottom: {
         image: null,
@@ -307,10 +308,11 @@
         svgWidth: 288,
         svgHeight: 288,
         clipPath: null,
+        outlinePath: null,
         displayScale: 1,
         displayOffsetX: 0,
         displayOffsetY: 0,
-        label: 'Bottom Panel (Pattern_4474)'
+        label: 'Bottom Panel'
       }
     };
 
@@ -441,9 +443,66 @@
       const img = new Image();
       img.onload = () => {
         panel.clipPath = img;
-        render2DCanvas();
+
+        // Create an outlined version of the SVG for preview
+        createOutlineFromMask(img, panel.svgWidth, panel.svgHeight).then(outlineImg => {
+          panel.outlinePath = outlineImg;
+          render2DCanvas();
+        });
       };
       img.src = panel.svgPath;
+    }
+
+    // Create an outline stroke from a filled SVG mask
+    function createOutlineFromMask(maskImg, width, height) {
+      return new Promise((resolve) => {
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = width;
+        tempCanvas.height = height;
+        const tempCtx = tempCanvas.getContext('2d');
+
+        // Draw the mask
+        tempCtx.drawImage(maskImg, 0, 0, width, height);
+
+        // Get image data to detect edges
+        const imageData = tempCtx.getImageData(0, 0, width, height);
+        const data = imageData.data;
+
+        // Create a new canvas for the outline
+        const outlineCanvas = document.createElement('canvas');
+        outlineCanvas.width = width;
+        outlineCanvas.height = height;
+        const outlineCtx = outlineCanvas.getContext('2d');
+
+        // Draw edges by detecting alpha changes
+        outlineCtx.strokeStyle = '#507CBC';
+        outlineCtx.lineWidth = 2;
+        outlineCtx.beginPath();
+
+        // Simple edge detection - look for alpha transitions
+        for (let y = 1; y < height - 1; y++) {
+          for (let x = 1; x < width - 1; x++) {
+            const idx = (y * width + x) * 4;
+            const alpha = data[idx + 3];
+
+            // Check if this is an edge pixel (alpha changes from neighbor)
+            const leftAlpha = data[(y * width + (x - 1)) * 4 + 3];
+            const rightAlpha = data[(y * width + (x + 1)) * 4 + 3];
+            const topAlpha = data[((y - 1) * width + x) * 4 + 3];
+            const bottomAlpha = data[((y + 1) * width + x) * 4 + 3];
+
+            if (alpha > 128 && (leftAlpha < 128 || rightAlpha < 128 || topAlpha < 128 || bottomAlpha < 128)) {
+              outlineCtx.fillStyle = '#507CBC';
+              outlineCtx.fillRect(x, y, 1, 1);
+            }
+          }
+        }
+
+        // Convert to image
+        const outlineImg = new Image();
+        outlineImg.onload = () => resolve(outlineImg);
+        outlineImg.src = outlineCanvas.toDataURL();
+      });
     }
 
     function handleFabricImageUpload(event) {
@@ -548,13 +607,43 @@
       drawCheckerboard(fabricCtx, panel.svgWidth, panel.svgHeight);
 
       if (panel.image) {
-        // Draw the image
         const imgWidth = panel.image.width * panel.scale;
         const imgHeight = panel.image.height * panel.scale;
+
+        // Layer 1: Draw the full image at 25% opacity
+        fabricCtx.globalAlpha = 1.0;
         fabricCtx.drawImage(panel.image, panel.x, panel.y, imgWidth, imgHeight);
+        fabricCtx.globalAlpha = 1.0;
+
+        // Layer 2: Draw the cropped image at 100% opacity (if we have a clipping mask)
+        if (panel.clipPath) {
+          // Save current state
+          fabricCtx.save();
+
+          // Create clipping region from the SVG mask
+          fabricCtx.globalCompositeOperation = 'source-over';
+
+          // Draw image again
+          fabricCtx.drawImage(panel.image, panel.x, panel.y, imgWidth, imgHeight);
+
+          // Apply mask to show only the clipped portion
+          fabricCtx.globalCompositeOperation = 'destination-in';
+          fabricCtx.drawImage(panel.clipPath, 0, 0, panel.svgWidth, panel.svgHeight);
+
+          // Restore composite operation
+          fabricCtx.globalCompositeOperation = 'source-over';
+
+          fabricCtx.restore();
+        }
       }
 
-      // Don't draw the SVG clipping mask overlay - user just sees the raw image they're manipulating
+      // Layer 3: Draw the SVG outline stroke (no fill) on top
+      if (panel.outlinePath) {
+        fabricCtx.save();
+        fabricCtx.globalAlpha = 1.0;
+        fabricCtx.drawImage(panel.outlinePath, 0, 0, panel.svgWidth, panel.svgHeight);
+        fabricCtx.restore();
+      }
 
       fabricCtx.restore();
     }
@@ -578,6 +667,9 @@
     async function generateFabricTextures() {
       const textures = {};
 
+      // Resolution multiplier for higher quality textures (2x, 3x, or 4x)
+      const TEXTURE_RESOLUTION_SCALE = 4;
+
       for (const [panelName, panel] of Object.entries(fabricPanels)) {
         if (!panel.image || !panel.clipPath) {
           console.log(`Skipping ${panelName}: image=${!!panel.image}, clipPath=${!!panel.clipPath}`);
@@ -586,16 +678,20 @@
 
         console.log(`Generating texture for ${panelName}:`, {
           svgSize: `${panel.svgWidth}x${panel.svgHeight}`,
+          outputSize: `${panel.svgWidth * TEXTURE_RESOLUTION_SCALE}x${panel.svgHeight * TEXTURE_RESOLUTION_SCALE}`,
           imageSize: `${panel.image.width}x${panel.image.height}`,
           position: `x=${panel.x}, y=${panel.y}`,
           scale: panel.scale
         });
 
-        // Create an offscreen canvas for this panel
+        // Create an offscreen canvas for this panel at higher resolution
         const offCanvas = document.createElement('canvas');
-        offCanvas.width = panel.svgWidth;
-        offCanvas.height = panel.svgHeight;
+        offCanvas.width = panel.svgWidth * TEXTURE_RESOLUTION_SCALE;
+        offCanvas.height = panel.svgHeight * TEXTURE_RESOLUTION_SCALE;
         const offCtx = offCanvas.getContext('2d');
+
+        // Scale the context to render at higher resolution
+        offCtx.scale(TEXTURE_RESOLUTION_SCALE, TEXTURE_RESOLUTION_SCALE);
 
         // Draw the positioned image
         const imgWidth = panel.image.width * panel.scale;
@@ -606,9 +702,9 @@
         offCtx.globalCompositeOperation = 'destination-in';
         offCtx.drawImage(panel.clipPath, 0, 0, panel.svgWidth, panel.svgHeight);
 
-        // Convert to texture
+        // Convert to texture with high quality
         textures[panelName] = offCanvas.toDataURL('image/png');
-        console.log(`Generated ${panelName} texture, data URL length: ${textures[panelName].length}`);
+        console.log(`Generated ${panelName} texture at ${offCanvas.width}x${offCanvas.height}, data URL length: ${textures[panelName].length}`);
       }
 
       return textures;
@@ -668,36 +764,35 @@
       controls.enableDamping = true;
       controls.dampingFactor = 0.05;
 
-      // Enhanced lighting for better visibility
-      // Bright ambient light for overall illumination
-      scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+      // Lighting setup
+      scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 
       // Top directional light
-      const topLight = new THREE.DirectionalLight(0xffffff, 0.5);
+      const topLight = new THREE.DirectionalLight(0xffffff, 0.3);
       topLight.position.set(0, 10, 0);
       scene.add(topLight);
 
       // Bottom directional light (illuminates the bottom surface)
-      const bottomLight = new THREE.DirectionalLight(0xffffff, 0.25);
+      const bottomLight = new THREE.DirectionalLight(0xffffff, 0.2);
       bottomLight.position.set(0, -10, 0);
       scene.add(bottomLight);
 
       // Front light
-      const frontLight = new THREE.DirectionalLight(0xffffff, 0.25);
+      const frontLight = new THREE.DirectionalLight(0xffffff, 0.3);
       frontLight.position.set(0, 0, 10);
       scene.add(frontLight);
 
       // Back light
-      const backLight = new THREE.DirectionalLight(0xffffff, 0.25);
+      const backLight = new THREE.DirectionalLight(0xffffff, 0.2);
       backLight.position.set(0, 0, -10);
       scene.add(backLight);
 
       // Side lights for even coverage
-      const leftLight = new THREE.DirectionalLight(0xffffff, 0.25);
+      const leftLight = new THREE.DirectionalLight(0xffffff, 0.2);
       leftLight.position.set(-10, 0, 0);
       scene.add(leftLight);
 
-      const rightLight = new THREE.DirectionalLight(0xffffff, 0.25);
+      const rightLight = new THREE.DirectionalLight(0xffffff, 0.2);
       rightLight.position.set(10, 0, 0);
       scene.add(rightLight);
 
@@ -844,9 +939,17 @@
         scene.remove(scene.children[0]);
       }
 
-      // Re-add enhanced lighting for better visibility
-      // Bright ambient light for overall illumination
-      scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+      // Re-add lighting
+      scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+
+      // Add directional lights for depth
+      const topLight = new THREE.DirectionalLight(0xffffff, 0.3);
+      topLight.position.set(0, 10, 0);
+      scene.add(topLight);
+
+      const frontLight = new THREE.DirectionalLight(0xffffff, 0.3);
+      frontLight.position.set(0, 0, 10);
+      scene.add(frontLight);
 
       // // Top directional light
       // const topLight = new THREE.DirectionalLight(0xffffff, 0.25);
