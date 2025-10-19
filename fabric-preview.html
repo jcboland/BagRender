@@ -262,7 +262,7 @@
     // Adjust these values to center the texture on each part
     // Positive values move texture right/up, negative values move left/down
     const TEXTURE_OFFSETS = {
-      external: { x: 0, y: 0.50 },  // Offset for Pattern_25178 (External Panel)
+      external: { x: 0.5, y: 0.5 },  // Offset for Pattern_25178 (External Panel)
       bottom: { x: 0.5  , y: 0.5 }      // Offset for Pattern_4474 (Bottom Panel)
     };
 
@@ -371,13 +371,30 @@
       fabricCanvas.addEventListener('wheel', onCanvasWheel, { passive: false });
 
       // Handle window resize
-      window.addEventListener('resize', () => {
-        const canvasContainer = document.getElementById('canvas-container');
-        canvasContainerWidth = canvasContainer.clientWidth;
-        canvasContainerHeight = canvasContainer.clientHeight;
-        init2DCanvas();
-      });
+      window.addEventListener('resize', handleResize);
 
+      render2DCanvas();
+    }
+
+    function handleResize() {
+      const canvasContainer = document.getElementById('canvas-container');
+      canvasContainerWidth = canvasContainer.clientWidth;
+      canvasContainerHeight = canvasContainer.clientHeight;
+
+      // Recalculate display scaling for each panel
+      const padding = 40;
+      for (const [key, panel] of Object.entries(fabricPanels)) {
+        const scaleX = (canvasContainerWidth - padding * 2) / panel.svgWidth;
+        const scaleY = (canvasContainerHeight - padding * 2) / panel.svgHeight;
+        panel.displayScale = Math.min(scaleX, scaleY, 1);
+
+        const displayWidth = panel.svgWidth * panel.displayScale;
+        const displayHeight = panel.svgHeight * panel.displayScale;
+        panel.displayOffsetX = (canvasContainerWidth - displayWidth) / 2;
+        panel.displayOffsetY = (canvasContainerHeight - displayHeight) / 2;
+      }
+
+      updateCanvasSize();
       render2DCanvas();
     }
 
@@ -461,6 +478,9 @@
         img.src = e.target.result;
       };
       reader.readAsDataURL(file);
+
+      // Reset the file input value to allow re-uploading the same file
+      event.target.value = '';
     }
 
     function onCanvasMouseDown(e) {
@@ -711,7 +731,8 @@
             texLoader.load(
               imageUrl,
               texture => {
-                texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+                texture.wrapT = THREE.RepeatWrapping;
+                texture.wrapS  = THREE.RepeatWrapping;
                 texture.repeat.set(1, 1);
                 texture.flipY = true;
                 textureCache[imageName] = texture;
@@ -825,36 +846,36 @@
 
       // Re-add enhanced lighting for better visibility
       // Bright ambient light for overall illumination
-      scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+      scene.add(new THREE.AmbientLight(0xffffff, 0.75));
 
-      // Top directional light
-      const topLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      topLight.position.set(0, 10, 0);
-      scene.add(topLight);
+      // // Top directional light
+      // const topLight = new THREE.DirectionalLight(0xffffff, 0.25);
+      // topLight.position.set(0, 10, 0);
+      // scene.add(topLight);
 
-      // Bottom directional light (illuminates the bottom surface)
-      const bottomLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      bottomLight.position.set(0, -10, 0);
-      scene.add(bottomLight);
+      // // Bottom directional light (illuminates the bottom surface)
+      // const bottomLight = new THREE.DirectionalLight(0xffffff, 0.25);
+      // bottomLight.position.set(0, -10, 0);
+      // scene.add(bottomLight);
 
-      // Front light
-      const frontLight = new THREE.DirectionalLight(0xffffff, 0.5);
-      frontLight.position.set(0, 0, 10);
-      scene.add(frontLight);
+      // // Front light
+      // const frontLight = new THREE.DirectionalLight(0xffffff, 0.125);
+      // frontLight.position.set(0, 0, 10);
+      // scene.add(frontLight);
 
-      // Back light
-      const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
-      backLight.position.set(0, 0, -10);
-      scene.add(backLight);
+      // // Back light
+      // const backLight = new THREE.DirectionalLight(0xffffff, 0.125);
+      // backLight.position.set(0, 0, -10);
+      // scene.add(backLight);
 
       // Side lights for even coverage
-      const leftLight = new THREE.DirectionalLight(0xffffff, 0.4);
-      leftLight.position.set(-10, 0, 0);
-      scene.add(leftLight);
+      // const leftLight = new THREE.DirectionalLight(0xffffff, 0.4);
+      // leftLight.position.set(-10, 0, 0);
+      // scene.add(leftLight);
 
-      const rightLight = new THREE.DirectionalLight(0xffffff, 0.4);
-      rightLight.position.set(10, 0, 0);
-      scene.add(rightLight);
+      // const rightLight = new THREE.DirectionalLight(0xffffff, 0.4);
+      // rightLight.position.set(10, 0, 0);
+      // scene.add(rightLight);
 
       // Generate textures from the 2D canvas
       const fabricTextures = await generateFabricTextures();
@@ -871,18 +892,42 @@
       // Load external panel texture (Pattern_25178)
       if (fabricTextures.external) {
         const texture = texLoader.load(fabricTextures.external);
-        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+
+        // === WRAPPING OPTIONS ===
+        // THREE.ClampToEdgeWrapping - Stretches edge pixels (no repeat)
+        // THREE.RepeatWrapping - Tiles/repeats the texture
+        // THREE.MirroredRepeatWrapping - Tiles with mirroring
+        texture.wrapS = THREE.ClampToEdgeWrapping;
+        texture.wrapT = THREE.ClampToEdgeWrapping;
+
+        // === REPEAT/SCALE ===
+        // repeat.set(x, y) - How many times texture repeats
+        // Values > 1 = texture repeats, < 1 = texture zooms in
         texture.repeat.set(1, 1);
+
+        // === FLIP ===
         texture.flipY = true;
 
-        // Rotate the texture 90 degrees (π/2 radians)
+        // === ROTATION ===
         // texture.rotation = Math.PI / 2; // 90 degrees clockwise
-        // texture.center.set(0.5, 0.5); // Rotate around center of texture
+        // texture.center.set(0.5, 0.5); // Rotation center point (0.5, 0.5 = center)
 
-        // Apply offset to center the texture on the UV map
+        // === OFFSET/POSITION ===
+        // offset.set(x, y) - Shifts texture position
+        // Positive = right/up, Negative = left/down
         texture.offset.set(TEXTURE_OFFSETS.external.x, TEXTURE_OFFSETS.external.y);
 
-        console.log(`External texture offset: x=${TEXTURE_OFFSETS.external.x}, y=${TEXTURE_OFFSETS.external.y}`);
+        console.log('═══════════════════════════════════════');
+        console.log('EXTERNAL PANEL TEXTURE (Pattern_25178)');
+        console.log('═══════════════════════════════════════');
+        console.log('Texture Properties:');
+        console.log(`  - wrapS: ${texture.wrapS === THREE.ClampToEdgeWrapping ? 'ClampToEdgeWrapping' : texture.wrapS === THREE.RepeatWrapping ? 'RepeatWrapping' : 'MirroredRepeatWrapping'}`);
+        console.log(`  - wrapT: ${texture.wrapT === THREE.ClampToEdgeWrapping ? 'ClampToEdgeWrapping' : texture.wrapT === THREE.RepeatWrapping ? 'RepeatWrapping' : 'MirroredRepeatWrapping'}`);
+        console.log(`  - repeat: (${texture.repeat.x}, ${texture.repeat.y})`);
+        console.log(`  - offset: (${texture.offset.x}, ${texture.offset.y})`);
+        console.log(`  - rotation: ${texture.rotation} radians (${(texture.rotation * 180 / Math.PI).toFixed(1)}°)`);
+        console.log(`  - center: (${texture.center.x}, ${texture.center.y})`);
+        console.log(`  - flipY: ${texture.flipY}`);
 
         textureCache['external'] = texture;
       }
@@ -890,14 +935,31 @@
       // Load bottom panel texture (Pattern_4474)
       if (fabricTextures.bottom) {
         const texture = texLoader.load(fabricTextures.bottom);
-        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+
+        // === WRAPPING OPTIONS ===
+        texture.wrapS = THREE.ClampToEdgeWrapping;
+        texture.wrapT = THREE.ClampToEdgeWrapping;
+
+        // === REPEAT/SCALE ===
         texture.repeat.set(1, 1);
+
+        // === FLIP ===
         texture.flipY = true;
 
-        // Apply offset to center the texture on the UV map
+        // === OFFSET/POSITION ===
         texture.offset.set(TEXTURE_OFFSETS.bottom.x, TEXTURE_OFFSETS.bottom.y);
 
-        console.log(`Bottom texture offset: x=${TEXTURE_OFFSETS.bottom.x}, y=${TEXTURE_OFFSETS.bottom.y}`);
+        console.log('═══════════════════════════════════════');
+        console.log('BOTTOM PANEL TEXTURE (Pattern_4474)');
+        console.log('═══════════════════════════════════════');
+        console.log('Texture Properties:');
+        console.log(`  - wrapS: ${texture.wrapS === THREE.ClampToEdgeWrapping ? 'ClampToEdgeWrapping' : texture.wrapS === THREE.RepeatWrapping ? 'RepeatWrapping' : 'MirroredRepeatWrapping'}`);
+        console.log(`  - wrapT: ${texture.wrapT === THREE.ClampToEdgeWrapping ? 'ClampToEdgeWrapping' : texture.wrapT === THREE.RepeatWrapping ? 'RepeatWrapping' : 'MirroredRepeatWrapping'}`);
+        console.log(`  - repeat: (${texture.repeat.x}, ${texture.repeat.y})`);
+        console.log(`  - offset: (${texture.offset.x}, ${texture.offset.y})`);
+        console.log(`  - rotation: ${texture.rotation} radians (${(texture.rotation * 180 / Math.PI).toFixed(1)}°)`);
+        console.log(`  - center: (${texture.center.x}, ${texture.center.y})`);
+        console.log(`  - flipY: ${texture.flipY}`);
 
         textureCache['bottom'] = texture;
       }
@@ -926,22 +988,84 @@
             if (child.name === "Pattern_25178") {
               pattern25178Count++;
               if (textureCache['external']) {
-                console.log(`✓ Applying EXTERNAL texture to Pattern_25178 (instance ${pattern25178Count})`);
+                console.log(`\n✓ Applying EXTERNAL texture to Pattern_25178 (instance ${pattern25178Count})`);
+
+                // Log mesh geometry info
+                console.log(`  Mesh Info:`);
+                console.log(`    - Vertices: ${child.geometry.attributes.position.count}`);
+                console.log(`    - Faces: ${child.geometry.index ? child.geometry.index.count / 3 : 'N/A'}`);
+                console.log(`    - Has UV mapping: ${!!child.geometry.attributes.uv}`);
+                if (child.geometry.attributes.uv) {
+                  const uvArray = child.geometry.attributes.uv.array;
+                  console.log(`    - UV coordinates count: ${uvArray.length / 2}`);
+
+                  // Calculate UV min/max without spread operator (avoids stack overflow)
+                  let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
+                  for (let i = 0; i < uvArray.length; i += 2) {
+                    const u = uvArray[i];
+                    const v = uvArray[i + 1];
+                    if (u < minU) minU = u;
+                    if (u > maxU) maxU = u;
+                    if (v < minV) minV = v;
+                    if (v > maxV) maxV = v;
+                  }
+                  console.log(`    - UV range: U[${minU.toFixed(3)}, ${maxU.toFixed(3)}], V[${minV.toFixed(3)}, ${maxV.toFixed(3)}]`);
+                }
+
+                // Calculate mesh bounds
+                child.geometry.computeBoundingBox();
+                const bbox = child.geometry.boundingBox;
+                console.log(`    - Bounding box:`);
+                console.log(`      Min: (${bbox.min.x.toFixed(2)}, ${bbox.min.y.toFixed(2)}, ${bbox.min.z.toFixed(2)})`);
+                console.log(`      Max: (${bbox.max.x.toFixed(2)}, ${bbox.max.y.toFixed(2)}, ${bbox.max.z.toFixed(2)})`);
+                console.log(`      Size: (${(bbox.max.x - bbox.min.x).toFixed(2)}, ${(bbox.max.y - bbox.min.y).toFixed(2)}, ${(bbox.max.z - bbox.min.z).toFixed(2)})`);
+
                 child.material = new THREE.MeshStandardMaterial({ map: textureCache['external'] });
               } else {
                 console.log(`✗ No external texture available for Pattern_25178`);
                 child.material = new THREE.MeshStandardMaterial({ color: 0xff0000 }); // Red for debugging
               }
-            } else if (child.name === "Pattern_4473") {
+            } else if (child.name === "Pattern_4474") {
               pattern4474Count++;
               if (textureCache['bottom']) {
-                console.log(`✓ Applying BOTTOM texture to Pattern_4474 (instance ${pattern4474Count})`);
+                console.log(`\n✓ Applying BOTTOM texture to Pattern_4474 (instance ${pattern4474Count})`);
+
+                // Log mesh geometry info
+                console.log(`  Mesh Info:`);
+                console.log(`    - Vertices: ${child.geometry.attributes.position.count}`);
+                console.log(`    - Faces: ${child.geometry.index ? child.geometry.index.count / 3 : 'N/A'}`);
+                console.log(`    - Has UV mapping: ${!!child.geometry.attributes.uv}`);
+                if (child.geometry.attributes.uv) {
+                  const uvArray = child.geometry.attributes.uv.array;
+                  console.log(`    - UV coordinates count: ${uvArray.length / 2}`);
+
+                  // Calculate UV min/max without spread operator (avoids stack overflow)
+                  let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
+                  for (let i = 0; i < uvArray.length; i += 2) {
+                    const u = uvArray[i];
+                    const v = uvArray[i + 1];
+                    if (u < minU) minU = u;
+                    if (u > maxU) maxU = u;
+                    if (v < minV) minV = v;
+                    if (v > maxV) maxV = v;
+                  }
+                  console.log(`    - UV range: U[${minU.toFixed(3)}, ${maxU.toFixed(3)}], V[${minV.toFixed(3)}, ${maxV.toFixed(3)}]`);
+                }
+
+                // Calculate mesh bounds
+                child.geometry.computeBoundingBox();
+                const bbox = child.geometry.boundingBox;
+                console.log(`    - Bounding box:`);
+                console.log(`      Min: (${bbox.min.x.toFixed(2)}, ${bbox.min.y.toFixed(2)}, ${bbox.min.z.toFixed(2)})`);
+                console.log(`      Max: (${bbox.max.x.toFixed(2)}, ${bbox.max.y.toFixed(2)}, ${bbox.max.z.toFixed(2)})`);
+                console.log(`      Size: (${(bbox.max.x - bbox.min.x).toFixed(2)}, ${(bbox.max.y - bbox.min.y).toFixed(2)}, ${(bbox.max.z - bbox.min.z).toFixed(2)})`);
+
                 child.material = new THREE.MeshStandardMaterial({ map: textureCache['bottom'] });
               } else {
-                console.log(`✗ No bottom texture available for Pattern_4474`);
+                console.log(`✗ No bottom texture available for Pattern_4473`);
                 child.material = new THREE.MeshStandardMaterial({ color: 0x00ff00 }); // Green for debugging
               }
-            } else if (config) {
+            }else if (config) {
               if (config.type === "color") {
                 child.material = new THREE.MeshStandardMaterial({ color: config.color });
               } else {
