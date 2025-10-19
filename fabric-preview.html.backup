@@ -68,39 +68,10 @@
       font-size: 12px;
     }
 
-    #panel-toggle-buttons {
-      display: flex;
-      gap: 10px;
-    }
-
-    .toggle-btn {
-      flex: 1;
-      padding: 10px 15px;
-      background: #e9ecef;
-      color: #495057;
-      border: 2px solid #dee2e6;
-      border-radius: 6px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .toggle-btn:hover {
-      background: #dee2e6;
-      border-color: #adb5bd;
-    }
-
-    .toggle-btn.active {
-      background: #007bff;
-      color: white;
-      border-color: #007bff;
-    }
-
     #generate-btn {
       width: 100%;
       padding: 12px 20px;
-      background: #28a745;
+      background: #007bff;
       color: white;
       border: none;
       border-radius: 6px;
@@ -111,11 +82,11 @@
     }
 
     #generate-btn:hover {
-      background: #218838;
+      background: #0056b3;
     }
 
     #generate-btn:active {
-      background: #1e7e34;
+      background: #004085;
     }
 
     #canvas-container {
@@ -173,18 +144,18 @@
         <h2>Fabric Positioning</h2>
 
         <div class="panel-section">
-          <h3>Panel Selection</h3>
-          <div id="panel-toggle-buttons">
-            <button class="toggle-btn active" data-panel="external">External Panel</button>
-            <button class="toggle-btn" data-panel="bottom">Bottom Panel</button>
+          <h3>External Panel (Pattern_25178)</h3>
+          <div class="file-input-wrapper">
+            <label>Upload Image:</label>
+            <input type="file" id="external-img-input" accept="image/*" />
           </div>
         </div>
 
         <div class="panel-section">
-          <h3 id="current-panel-name">External Panel (Pattern_25178)</h3>
+          <h3>Bottom Panel (Pattern_4474)</h3>
           <div class="file-input-wrapper">
             <label>Upload Image:</label>
-            <input type="file" id="fabric-img-input" accept="image/*" />
+            <input type="file" id="bottom-img-input" accept="image/*" />
           </div>
         </div>
 
@@ -247,8 +218,8 @@
 
       // All other bodies not listed above will default to black (0x000000)
       // Add more bodies here as needed:
-      // "Pattern_4474": { type: "color", color: 0xff0000 },
-       //"Pattern_4474": { type: "texture", image: "MyFabric.png" },
+      // "Pattern_4473": { type: "color", color: 0xff0000 },
+      // "Pattern_25185": { type: "texture", image: "MyFabric.png" },
       // "Pattern_25189": { type: "texture", image: "https://example.com/texture.jpg" },
     };
 
@@ -258,16 +229,8 @@
     // Base path for local images (leave empty if using full URLs)
     const imageBasePath = 'https://wompatuck-prints.s3.us-west-1.amazonaws.com/render/';
 
-    // Texture offset adjustments for centering on 3D model
-    // Adjust these values to center the texture on each part
-    // Positive values move texture right/up, negative values move left/down
-    const TEXTURE_OFFSETS = {
-      external: { x: 0, y: 0.50 },  // Offset for Pattern_25178 (External Panel)
-      bottom: { x: 0.5  , y: 0.5 }      // Offset for Pattern_4474 (Bottom Panel)
-    };
-
     // AVAILABLE BODIES IN FeedbagOBJ.obj:
-    // Pattern_4474, Pattern_25178, Pattern_25179, Pattern_4474, Pattern_25185,
+    // Pattern_4473, Pattern_25178, Pattern_25179, Pattern_4474, Pattern_25185,
     // Pattern_25191, Pattern_304806, Pattern_700495, Pattern_25189, Pattern_25192,
     // Pattern_157053, Pattern_157054, Pattern_453128, Pattern_453129, Pattern_453130,
     // Pattern_453132, Pattern_453134, Pattern_453135, Pattern_453131, pHelix1 group1,
@@ -290,13 +253,10 @@
         y: 0,
         scale: 1,
         svgPath: 'ExternalPanel.svg',
-        svgWidth: 900,
-        svgHeight: 550,
+        svgWidth: 1440,
+        svgHeight: 720,
         clipPath: null,
-        displayScale: 1,
-        displayOffsetX: 0,
-        displayOffsetY: 0,
-        label: 'External Panel (Pattern_25178)'
+        active: true
       },
       bottom: {
         image: null,
@@ -304,13 +264,10 @@
         y: 0,
         scale: 1,
         svgPath: 'BottomOutline.svg',
-        svgWidth: 288,
-        svgHeight: 288,
+        svgWidth: 720,
+        svgHeight: 720,
         clipPath: null,
-        displayScale: 1,
-        displayOffsetX: 0,
-        displayOffsetY: 0,
-        label: 'Bottom Panel (Pattern_4474)'
+        active: false
       }
     };
 
@@ -320,49 +277,22 @@
     let dragStartY = 0;
     let lastX = 0;
     let lastY = 0;
-    let canvasContainerWidth = 0;
-    let canvasContainerHeight = 0;
 
     // Initialize 2D canvas
     function init2DCanvas() {
-      // Get canvas container dimensions
-      const canvasContainer = document.getElementById('canvas-container');
-      canvasContainerWidth = canvasContainer.clientWidth;
-      canvasContainerHeight = canvasContainer.clientHeight;
-
-      // Calculate display scaling for each panel to fit in container with padding
-      const padding = 40;
-      for (const [key, panel] of Object.entries(fabricPanels)) {
-        const scaleX = (canvasContainerWidth - padding * 2) / panel.svgWidth;
-        const scaleY = (canvasContainerHeight - padding * 2) / panel.svgHeight;
-        panel.displayScale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down
-
-        // Center the canvas
-        const displayWidth = panel.svgWidth * panel.displayScale;
-        const displayHeight = panel.svgHeight * panel.displayScale;
-        panel.displayOffsetX = (canvasContainerWidth - displayWidth) / 2;
-        panel.displayOffsetY = (canvasContainerHeight - displayHeight) / 2;
-      }
-
-      // Set initial canvas size
-      updateCanvasSize();
+      // Set canvas size based on the active panel
+      const panel = fabricPanels[currentPanel];
+      fabricCanvas.width = panel.svgWidth;
+      fabricCanvas.height = panel.svgHeight;
 
       // Load SVG clip paths
       loadSVGClipPath('external');
       loadSVGClipPath('bottom');
 
       // Setup event listeners
-      document.getElementById('fabric-img-input').addEventListener('change', handleFabricImageUpload);
+      document.getElementById('external-img-input').addEventListener('change', (e) => handleFabricImageUpload(e, 'external'));
+      document.getElementById('bottom-img-input').addEventListener('change', (e) => handleFabricImageUpload(e, 'bottom'));
       document.getElementById('generate-btn').addEventListener('click', generatePreview);
-
-      // Toggle button listeners
-      const toggleButtons = document.querySelectorAll('.toggle-btn');
-      toggleButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-          const panelName = btn.dataset.panel;
-          switchToPanel(panelName);
-        });
-      });
 
       fabricCanvas.addEventListener('mousedown', onCanvasMouseDown);
       fabricCanvas.addEventListener('mousemove', onCanvasMouseMove);
@@ -370,52 +300,6 @@
       fabricCanvas.addEventListener('mouseleave', onCanvasMouseUp);
       fabricCanvas.addEventListener('wheel', onCanvasWheel, { passive: false });
 
-      // Handle window resize
-      window.addEventListener('resize', () => {
-        const canvasContainer = document.getElementById('canvas-container');
-        canvasContainerWidth = canvasContainer.clientWidth;
-        canvasContainerHeight = canvasContainer.clientHeight;
-        init2DCanvas();
-      });
-
-      render2DCanvas();
-    }
-
-    function updateCanvasSize() {
-      const panel = fabricPanels[currentPanel];
-      const displayWidth = panel.svgWidth * panel.displayScale;
-      const displayHeight = panel.svgHeight * panel.displayScale;
-
-      fabricCanvas.width = displayWidth;
-      fabricCanvas.height = displayHeight;
-
-      // Center the canvas using CSS transform (already set in styles)
-      // Remove any inline positioning that would override CSS
-      fabricCanvas.style.left = '50%';
-      fabricCanvas.style.top = '50%';
-      fabricCanvas.style.transform = 'translate(-50%, -50%)';
-    }
-
-    function switchToPanel(panelName) {
-      currentPanel = panelName;
-
-      // Update toggle buttons
-      document.querySelectorAll('.toggle-btn').forEach(btn => {
-        if (btn.dataset.panel === panelName) {
-          btn.classList.add('active');
-        } else {
-          btn.classList.remove('active');
-        }
-      });
-
-      // Update panel name
-      const panel = fabricPanels[panelName];
-      document.getElementById('current-panel-name').textContent = panel.label;
-
-      // Update canvas size
-      updateCanvasSize();
-
-      // Re-render
       render2DCanvas();
     }
 
@@ -429,7 +313,7 @@
       img.src = panel.svgPath;
     }
 
-    function handleFabricImageUpload(event) {
+    function handleFabricImageUpload(event, panelName) {
       const file = event.target.files[0];
       if (!file) return;
 
@@ -437,24 +321,17 @@
       reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
+          fabricPanels[panelName].image = img;
+          fabricPanels[panelName].x = 0;
+          fabricPanels[panelName].y = 0;
+          fabricPanels[panelName].scale = 1;
+          fabricPanels[panelName].active = true;
+
+          // Switch to this panel for editing
+          currentPanel = panelName;
           const panel = fabricPanels[currentPanel];
-          panel.image = img;
-
-          // Center the image in the canvas with initial scale to fit
-          const imageAspect = img.width / img.height;
-          const canvasAspect = panel.svgWidth / panel.svgHeight;
-
-          if (imageAspect > canvasAspect) {
-            // Image is wider - fit to width
-            panel.scale = panel.svgWidth / img.width;
-          } else {
-            // Image is taller - fit to height
-            panel.scale = panel.svgHeight / img.height;
-          }
-
-          // Center the image
-          panel.x = (panel.svgWidth - img.width * panel.scale) / 2;
-          panel.y = (panel.svgHeight - img.height * panel.scale) / 2;
+          fabricCanvas.width = panel.svgWidth;
+          fabricCanvas.height = panel.svgHeight;
 
           render2DCanvas();
         };
@@ -469,8 +346,8 @@
 
       isDragging = true;
       const rect = fabricCanvas.getBoundingClientRect();
-      dragStartX = (e.clientX - rect.left) / panel.displayScale;
-      dragStartY = (e.clientY - rect.top) / panel.displayScale;
+      dragStartX = e.clientX - rect.left;
+      dragStartY = e.clientY - rect.top;
       lastX = panel.x;
       lastY = panel.y;
     }
@@ -479,8 +356,8 @@
       if (!isDragging) return;
 
       const rect = fabricCanvas.getBoundingClientRect();
-      const currentX = (e.clientX - rect.left) / fabricPanels[currentPanel].displayScale;
-      const currentY = (e.clientY - rect.top) / fabricPanels[currentPanel].displayScale;
+      const currentX = e.clientX - rect.left;
+      const currentY = e.clientY - rect.top;
 
       const panel = fabricPanels[currentPanel];
       panel.x = lastX + (currentX - dragStartX);
@@ -502,10 +379,10 @@
       const delta = e.deltaY > 0 ? 0.9 : 1.1;
       const newScale = Math.max(0.1, Math.min(5, panel.scale * delta));
 
-      // Zoom towards mouse position (accounting for display scale)
+      // Zoom towards mouse position
       const rect = fabricCanvas.getBoundingClientRect();
-      const mouseX = (e.clientX - rect.left) / panel.displayScale;
-      const mouseY = (e.clientY - rect.top) / panel.displayScale;
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
 
       const scaleChange = newScale / panel.scale;
       panel.x = mouseX - (mouseX - panel.x) * scaleChange;
@@ -520,23 +397,27 @@
 
       fabricCtx.clearRect(0, 0, fabricCanvas.width, fabricCanvas.height);
 
-      // Scale context to fit display
-      fabricCtx.save();
-      fabricCtx.scale(panel.displayScale, panel.displayScale);
-
       // Draw checkerboard background
-      drawCheckerboard(fabricCtx, panel.svgWidth, panel.svgHeight);
+      drawCheckerboard(fabricCtx, fabricCanvas.width, fabricCanvas.height);
 
       if (panel.image) {
+        fabricCtx.save();
+
         // Draw the image
         const imgWidth = panel.image.width * panel.scale;
         const imgHeight = panel.image.height * panel.scale;
         fabricCtx.drawImage(panel.image, panel.x, panel.y, imgWidth, imgHeight);
+
+        fabricCtx.restore();
       }
 
-      // Don't draw the SVG clipping mask overlay - user just sees the raw image they're manipulating
-
-      fabricCtx.restore();
+      // Draw the SVG clip path outline on top
+      if (panel.clipPath) {
+        fabricCtx.save();
+        fabricCtx.globalAlpha = 0.8;
+        fabricCtx.drawImage(panel.clipPath, 0, 0, panel.svgWidth, panel.svgHeight);
+        fabricCtx.restore();
+      }
     }
 
     function drawCheckerboard(ctx, width, height) {
@@ -559,17 +440,7 @@
       const textures = {};
 
       for (const [panelName, panel] of Object.entries(fabricPanels)) {
-        if (!panel.image || !panel.clipPath) {
-          console.log(`Skipping ${panelName}: image=${!!panel.image}, clipPath=${!!panel.clipPath}`);
-          continue;
-        }
-
-        console.log(`Generating texture for ${panelName}:`, {
-          svgSize: `${panel.svgWidth}x${panel.svgHeight}`,
-          imageSize: `${panel.image.width}x${panel.image.height}`,
-          position: `x=${panel.x}, y=${panel.y}`,
-          scale: panel.scale
-        });
+        if (!panel.image || !panel.clipPath) continue;
 
         // Create an offscreen canvas for this panel
         const offCanvas = document.createElement('canvas');
@@ -588,35 +459,9 @@
 
         // Convert to texture
         textures[panelName] = offCanvas.toDataURL('image/png');
-        console.log(`Generated ${panelName} texture, data URL length: ${textures[panelName].length}`);
       }
 
       return textures;
-    }
-
-    // Download the cropped texture images
-    function downloadCroppedImages(fabricTextures) {
-      let delay = 0;
-      for (const [panelName, dataUrl] of Object.entries(fabricTextures)) {
-        if (!dataUrl) continue;
-
-        // Add a small delay between downloads to prevent conflicts
-        setTimeout(() => {
-          // Create a temporary link element
-          const link = document.createElement('a');
-          link.download = `${panelName}_cropped_texture.png`;
-          link.href = dataUrl;
-
-          // Trigger download
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-
-          console.log(`Downloaded ${panelName} texture`);
-        }, delay);
-
-        delay += 100; // 100ms delay between downloads
-      }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -648,38 +493,10 @@
       controls.enableDamping = true;
       controls.dampingFactor = 0.05;
 
-      // Enhanced lighting for better visibility
-      // Bright ambient light for overall illumination
-      scene.add(new THREE.AmbientLight(0xffffff, 0.25));
-
-      // Top directional light
-      const topLight = new THREE.DirectionalLight(0xffffff, 0.5);
-      topLight.position.set(0, 10, 0);
-      scene.add(topLight);
-
-      // Bottom directional light (illuminates the bottom surface)
-      const bottomLight = new THREE.DirectionalLight(0xffffff, 0.25);
-      bottomLight.position.set(0, -10, 0);
-      scene.add(bottomLight);
-
-      // Front light
-      const frontLight = new THREE.DirectionalLight(0xffffff, 0.25);
-      frontLight.position.set(0, 0, 10);
-      scene.add(frontLight);
-
-      // Back light
-      const backLight = new THREE.DirectionalLight(0xffffff, 0.25);
-      backLight.position.set(0, 0, -10);
-      scene.add(backLight);
-
-      // Side lights for even coverage
-      const leftLight = new THREE.DirectionalLight(0xffffff, 0.25);
-      leftLight.position.set(-10, 0, 0);
-      scene.add(leftLight);
-
-      const rightLight = new THREE.DirectionalLight(0xffffff, 0.25);
-      rightLight.position.set(10, 0, 0);
-      scene.add(rightLight);
+      scene.add(new THREE.AmbientLight(0x404040));
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+      dirLight.position.set(5, 10, 7);
+      scene.add(dirLight);
 
       window.addEventListener('resize', () => {
         const rightPanel = document.getElementById('right-panel');
@@ -817,167 +634,122 @@
     // Generate 3D Preview with positioned fabric textures
     async function generatePreview() {
       console.log("Generating 3D Preview...");
+      //if (!file || !objMesh) return;
 
-      // Clear the current scene
-      while(scene.children.length > 0) {
-        scene.remove(scene.children[0]);
-      }
+      // const url = URL.createObjectURL(file);
+      // const loader = new THREE.TextureLoader();
 
-      // Re-add enhanced lighting for better visibility
-      // Bright ambient light for overall illumination
-      scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+      // loader.load(url, texture => {
+      //   texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      //   texture.repeat.set(1, 1);
+      //   texture.flipY = false;
 
-      // Top directional light
-      const topLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      topLight.position.set(0, 10, 0);
-      scene.add(topLight);
+      //   objMesh.material.map = texture;
+      //   objMesh.material.needsUpdate = true;
 
-      // Bottom directional light (illuminates the bottom surface)
-      const bottomLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      bottomLight.position.set(0, -10, 0);
-      scene.add(bottomLight);
 
-      // Front light
-      const frontLight = new THREE.DirectionalLight(0xffffff, 0.5);
-      frontLight.position.set(0, 0, 10);
-      scene.add(frontLight);
+        
+      // });
+        
+        // Clear the current scene
+        while(scene.children.length > 0) {
+          scene.remove(scene.children[0]);
+        }
 
-      // Back light
-      const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
-      backLight.position.set(0, 0, -10);
-      scene.add(backLight);
+        // Re-add lights
+        scene.add(new THREE.AmbientLight(0x404040));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+        dirLight.position.set(5, 10, 7);
+        scene.add(dirLight);
 
-      // Side lights for even coverage
-      const leftLight = new THREE.DirectionalLight(0xffffff, 0.4);
-      leftLight.position.set(-10, 0, 0);
-      scene.add(leftLight);
+        const loader = new OBJLoader();
+        const url = URL.createObjectURL(file);
+        console.log("Loading uploaded texture: " + url);
+        const texLoader = new THREE.TextureLoader();
 
-      const rightLight = new THREE.DirectionalLight(0xffffff, 0.4);
-      rightLight.position.set(10, 0, 0);
-      scene.add(rightLight);
+        // Load the uploaded texture
+        texLoader.load(url, uploadedTexture => {
+          uploadedTexture.wrapS = uploadedTexture.wrapT = THREE.RepeatWrapping;
+          uploadedTexture.repeat.set(1, 1);
+          uploadedTexture.flipY = true;
 
-      // Generate textures from the 2D canvas
-      const fabricTextures = await generateFabricTextures();
+          // Also load any other textures that are in the config
+          const textureCache = { 'UPLOADED': uploadedTexture };
+          const texturesToLoad = new Set();
 
-      // Download the cropped images for debugging
-      //downloadCroppedImages(fabricTextures);
-
-      const loader = new OBJLoader();
-      const texLoader = new THREE.TextureLoader();
-
-      // Load custom textures from the 2D canvas
-      const textureCache = {};
-
-      // Load external panel texture (Pattern_25178)
-      if (fabricTextures.external) {
-        const texture = texLoader.load(fabricTextures.external);
-        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(1, 1);
-        texture.flipY = true;
-
-        // Rotate the texture 90 degrees (π/2 radians)
-        // texture.rotation = Math.PI / 2; // 90 degrees clockwise
-        // texture.center.set(0.5, 0.5); // Rotate around center of texture
-
-        // Apply offset to center the texture on the UV map
-        texture.offset.set(TEXTURE_OFFSETS.external.x, TEXTURE_OFFSETS.external.y);
-
-        console.log(`External texture offset: x=${TEXTURE_OFFSETS.external.x}, y=${TEXTURE_OFFSETS.external.y}`);
-
-        textureCache['external'] = texture;
-      }
-
-      // Load bottom panel texture (Pattern_4474)
-      if (fabricTextures.bottom) {
-        const texture = texLoader.load(fabricTextures.bottom);
-        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(1, 1);
-        texture.flipY = true;
-
-        // Apply offset to center the texture on the UV map
-        texture.offset.set(TEXTURE_OFFSETS.bottom.x, TEXTURE_OFFSETS.bottom.y);
-
-        console.log(`Bottom texture offset: x=${TEXTURE_OFFSETS.bottom.x}, y=${TEXTURE_OFFSETS.bottom.y}`);
-
-        textureCache['bottom'] = texture;
-      }
-
-      // Load the 3D model
-      loader.load(objURL, obj => {
-        console.log("=== Loading 3D Model ===");
-        console.log("Available textures:", Object.keys(textureCache));
-
-        // First pass: log all mesh names
-        const meshNames = [];
-        obj.traverse(child => {
-          if (child.isMesh) {
-            meshNames.push(child.name);
-          }
-        });
-        console.log("All mesh names in OBJ:", meshNames);
-
-        let pattern25178Count = 0;
-        let pattern4474Count = 0;
-
-        obj.traverse(child => {
-          if (child.isMesh) {
-            const config = BODY_MATERIAL_MAP[child.name];
-
-            if (child.name === "Pattern_25178") {
-              pattern25178Count++;
-              if (textureCache['external']) {
-                console.log(`✓ Applying EXTERNAL texture to Pattern_25178 (instance ${pattern25178Count})`);
-                child.material = new THREE.MeshStandardMaterial({ map: textureCache['external'] });
-              } else {
-                console.log(`✗ No external texture available for Pattern_25178`);
-                child.material = new THREE.MeshStandardMaterial({ color: 0xff0000 }); // Red for debugging
-              }
-            } else if (child.name === "Pattern_4473") {
-              pattern4474Count++;
-              if (textureCache['bottom']) {
-                console.log(`✓ Applying BOTTOM texture to Pattern_4474 (instance ${pattern4474Count})`);
-                child.material = new THREE.MeshStandardMaterial({ map: textureCache['bottom'] });
-              } else {
-                console.log(`✗ No bottom texture available for Pattern_4474`);
-                child.material = new THREE.MeshStandardMaterial({ color: 0x00ff00 }); // Green for debugging
-              }
-            } else if (config) {
-              if (config.type === "color") {
-                child.material = new THREE.MeshStandardMaterial({ color: config.color });
-              } else {
-                // Default fallback
-                child.material = new THREE.MeshStandardMaterial({ color: 0x808080 });
-              }
-            } else {
-              child.material = new THREE.MeshStandardMaterial({ color: 0x000000 });
+          Object.values(BODY_MATERIAL_MAP).forEach(config => {
+            if (config.type === "texture" && config.image) {
+              texturesToLoad.add(config.image);
             }
-          }
+          });
+
+          const texturePromises = Array.from(texturesToLoad).map(imageName => {
+            return new Promise((resolve) => {
+              const imageUrl = imageName.startsWith('http') ? imageName : imageBasePath + imageName;
+              texLoader.load(
+                imageUrl,
+                texture => {
+                  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+                  texture.repeat.set(1, 1);
+                  texture.flipY = true;
+                  textureCache[imageName] = texture;
+                  resolve();
+                },
+                undefined,
+                error => {
+                  console.error(`Failed to load texture: ${imageName}`, error);
+                  resolve();
+                }
+              );
+            });
+          });
+
+          Promise.all(texturePromises).then(() => {
+            loader.load(objURL, obj => {
+              obj.traverse(child => {
+                if (child.isMesh) {
+                  const config = BODY_MATERIAL_MAP[child.name];
+
+                  if (config) {
+                    if (config.type === "texture") {
+                      // Use the texture specified in config
+                      const texture = config.image ? textureCache[config.image] : null;
+                      if (texture) {
+                        child.material = new THREE.MeshStandardMaterial({ map: texture });
+                      } else {
+                        child.material = new THREE.MeshStandardMaterial({ color: 0x808080 });
+                      }
+                    } else if (config.type === "color") {
+                      child.material = new THREE.MeshStandardMaterial({ color: config.color });
+                    }
+                  } else {
+                    child.material = new THREE.MeshStandardMaterial({ color: 0x000000 });
+                  }
+                }
+              });
+
+         // Center camera on model
+          const bbox = new THREE.Box3().setFromObject(obj);
+          const center = bbox.getCenter(new THREE.Vector3());
+          const size = bbox.getSize(new THREE.Vector3());
+          const maxDim = Math.max(size.x, size.y, size.z);
+          const fitDist = maxDim * 1.5;
+
+          camera.position.set(center.x, center.y, center.z + fitDist);
+          camera.lookAt(center);
+          controls.target.copy(center);
+          controls.update();
+
+            // ✅ Add to scene etc.
+            scene.add(obj);
+            });
+          });
         });
 
-        console.log(`Found ${pattern25178Count} instances of Pattern_25178`);
-        console.log(`Found ${pattern4474Count} instances of Pattern_4474`);
-
-        // Center camera on model
-        const bbox = new THREE.Box3().setFromObject(obj);
-        const center = bbox.getCenter(new THREE.Vector3());
-        const size = bbox.getSize(new THREE.Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const fitDist = maxDim * 1.5;
-
-        camera.position.set(center.x, center.y, center.z + fitDist);
-        camera.lookAt(center);
-        controls.target.copy(center);
-        controls.update();
-
-        currentModel = obj;
-        scene.add(obj);
-
-        console.log("3D Preview generated successfully!");
-      });
     }
 
-    function animate3D() {
-      requestAnimationFrame(animate3D);
+    function animate() {
+      requestAnimationFrame(animate);
       controls.update();
       renderer.render(scene, camera);
     }
