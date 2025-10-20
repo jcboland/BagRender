@@ -271,9 +271,71 @@
       height: 100%;
       object-fit: cover;
     }
+
+    /* Loading Indicator */
+    #loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+    }
+
+    #loading-overlay.visible {
+      display: flex;
+    }
+
+    .loading-content {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .spinner {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 20px;
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #507CBC;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .loading-subtext {
+      font-size: 14px;
+      color: #666;
+    }
   </style>
 </head>
 <body>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay">
+      <div class="loading-content">
+        <div class="spinner"></div>
+        <div class="loading-text">Generating 3D Preview</div>
+        <div class="loading-subtext">Please wait...</div>
+      </div>
+    </div>
+
     <button id="fabric-toggle" type="button" aria-controls="fabric-menu-side" aria-expanded="false" title="Show image library">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <rect x="3" y="3" width="7" height="7" />
@@ -1245,6 +1307,12 @@
     async function generatePreview() {
       console.log("Generating 3D Preview...");
 
+      // Show loading indicator
+      const loadingOverlay = document.getElementById('loading-overlay');
+      if (loadingOverlay) {
+        loadingOverlay.classList.add('visible');
+      }
+
       // Clear the current scene
       while(scene.children.length > 0) {
         scene.remove(scene.children[0]);
@@ -1531,6 +1599,12 @@
         scene.add(obj);
 
         console.log("3D Preview generated successfully!");
+
+        // Hide loading indicator
+        const loadingOverlay = document.getElementById('loading-overlay');
+        if (loadingOverlay) {
+          loadingOverlay.classList.remove('visible');
+        }
       });
     }
 
