@@ -28,7 +28,7 @@
 
     #controls-header {
       background: white;
-      padding: 20px;
+      padding: 10px;
       border-bottom: 1px solid #ddd;
     }
 
@@ -68,6 +68,66 @@
 
     .file-input-wrapper input[type="file"] {
       font-size: 16px;
+    }
+
+    .load-bag-section {
+      margin-top: 15px;
+      padding: 25px;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .load-bag-section label {
+      display: block;
+      font-size: 13px;
+      color: #444;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .load-bag-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    #load-bag-input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 2px solid #dee2e6;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      transition: border-color 0.2s;
+    }
+
+    #load-bag-input:focus {
+      outline: none;
+      border-color: #507CBC;
+    }
+
+    .load-bag-button {
+      padding: 8px 20px;
+      background: #507CBC;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+
+    .load-bag-button:hover {
+      background: #3d5f99;
+    }
+
+    .load-bag-button:active {
+      background: #2a4570;
+    }
+
+    .load-bag-button:disabled {
+      background: #adb5bd;
+      cursor: not-allowed;
     }
 
     #panel-toggle-buttons {
@@ -446,6 +506,7 @@
             <input type="file" id="fabric-img-input" accept="image/*" />
           </div>
 
+          
         </div>
 
         <button id="generate-btn" >Generate 3D Preview</button>
@@ -461,6 +522,14 @@
           Drag to move • Scroll to zoom
         </div>
       </div>
+      <div class="load-bag-section">
+            <label for="load-bag-input">Load Saved Bag:</label>
+            <div class="load-bag-controls">
+              <input type="text" id="load-bag-input" placeholder="Enter Bag ID" />
+              <button id="load-bag-btn" class="load-bag-button">Load</button>
+            </div>
+          </div>
+
     </div>
 
     <!-- Right Panel: 3D Preview -->
@@ -817,6 +886,61 @@
       // Setup event listeners
       document.getElementById('fabric-img-input').addEventListener('change', handleFabricImageUpload);
       document.getElementById('generate-btn').addEventListener('click', generatePreview);
+
+      // Load bag button listener
+      const loadBagBtn = document.getElementById('load-bag-btn');
+      const loadBagInput = document.getElementById('load-bag-input');
+
+      if (loadBagBtn && loadBagInput) {
+        loadBagBtn.addEventListener('click', async () => {
+          const inputBagID = loadBagInput.value.trim();
+
+          if (!inputBagID) {
+            alert('Please enter a Bag ID');
+            return;
+          }
+
+          console.log('Loading bag from input:', inputBagID);
+
+          // Disable button and show loading state
+          loadBagBtn.disabled = true;
+          loadBagBtn.textContent = 'Loading...';
+
+          try {
+            // Update the global bagID
+            bagID = inputBagID;
+            window.bagID = inputBagID;
+            localStorage.setItem('bagID', inputBagID);
+
+            // Load the bag from S3
+            await loadBagFromS3(inputBagID);
+
+            // Update the bag ID display if it exists
+            const bagIdDisplay = document.getElementById('bag-id-display');
+            const bagIdValue = document.getElementById('bag-id-value');
+            if (bagIdDisplay && bagIdValue) {
+              bagIdValue.textContent = inputBagID;
+              bagIdDisplay.style.display = 'block';
+            }
+
+            alert(`Bag "${inputBagID}" loaded successfully!`);
+          } catch (error) {
+            console.error('Failed to load bag:', error);
+            alert(`Failed to load bag "${inputBagID}". The bag may not exist or the images may not be accessible.`);
+          } finally {
+            // Re-enable button and restore text
+            loadBagBtn.disabled = false;
+            loadBagBtn.textContent = 'Load';
+          }
+        });
+
+        // Also allow Enter key to trigger load
+        loadBagInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            loadBagBtn.click();
+          }
+        });
+      }
 
       // Toggle button listeners
       const toggleButtons = document.querySelectorAll('.toggle-btn');
