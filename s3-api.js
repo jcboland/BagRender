@@ -144,4 +144,65 @@ class S3API {
     return uploadObj;
   }
 
+  getObject(params, callback) {
+    const self = this;
+    let progressCallback = null;
+
+    const getObj = {
+      on(event, callback) {
+        if (event === "httpDownloadProgress") {
+          progressCallback = callback;
+        }
+        return getObj;
+      },
+      send(callback) {
+        // Step 1: Get the presigned download URL from the API
+        fetch(`${self.apiUrl}/objects?key=${encodeURIComponent(params.Key)}`)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`Failed to get download URL: ${response.status} - ${response.statusText}`);
+            }
+            return response.json();
+          })
+          .then(data => {
+            const downloadUrl = data.download_url;
+            if (!downloadUrl) {
+              throw new Error("Download URL missing in response");
+            }
+
+            // Step 2: Download from the presigned URL with progress tracking
+            const xhr = new XMLHttpRequest();
+
+            xhr.addEventListener("progress", (e) => {
+              if (e.lengthComputable && progressCallback) {
+                progressCallback({ loaded: e.loaded, total: e.total });
+              }
+            });
+
+            xhr.addEventListener("load", () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                callback(null, { Body: xhr.response });
+              } else {
+                callback(new Error(`Failed to download object: ${xhr.status} - ${xhr.statusText}`), null);
+              }
+            });
+
+            xhr.addEventListener("error", () => callback(new Error("Network error during download"), null));
+
+            xhr.open("GET", downloadUrl);
+            xhr.responseType = "blob";
+            xhr.send();
+          })
+          .catch(err => callback(err, null));
+      }
+    };
+
+    // If callback is provided directly, call send immediately
+    if (callback) {
+      getObj.send(callback);
+      return;
+    }
+
+    return getObj;
+  }
 }

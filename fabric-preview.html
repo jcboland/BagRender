@@ -622,20 +622,32 @@
 
 
     function setBagID(){
-      // First Check if there is a code in the URL
-      // Check if there is anything to load based on the webpage address
-      // Get the value from the webpage
-      // const urlParams = new URLSearchParams(window.location.search);
-      // let myValue = urlParams.get('bagid');
-      // bagID = myValue;
+      // First Check if there is a bagID in the URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlBagID = urlParams.get('bagid') || urlParams.get('bagID');
 
-      // Create a new Bag ID
-      const currDate = new Date();
-      bagID = "";
-      bagID += currDate.getFullYear();
-      bagID += currDate.getMonth() + 1;
-      bagID += currDate.getDate();
-      bagID += makeId(5);
+      if (urlBagID) {
+        // Load existing bag from URL parameter
+        bagID = urlBagID;
+        console.log("Loading existing Bag ID from URL:", bagID);
+
+        // Try to load the bag design from S3
+        loadBagFromS3(bagID).then(() => {
+          console.log("Bag design loaded successfully");
+        }).catch(error => {
+          console.error("Failed to load bag design:", error);
+          alert("Failed to load bag design. The bag ID may not exist or the images may not be accessible.");
+        });
+      } else {
+        // Create a new Bag ID
+        const currDate = new Date();
+        bagID = "";
+        bagID += currDate.getFullYear();
+        bagID += currDate.getMonth() + 1;
+        bagID += currDate.getDate();
+        bagID += makeId(5);
+        console.log("Created new Bag ID:", bagID);
+      }
 
       // Report the Bag ID number
       console.log("Bag ID: " + bagID);
@@ -647,6 +659,115 @@
       window.bagID = bagID;
 
       return bagID;
+    }
+
+    // Load bag design from S3 bucket using S3 API
+    async function loadBagFromS3(loadBagID) {
+      console.log("Loading bag design from S3 for Bag ID:", loadBagID);
+
+      const imagePaths = {
+        external: `orders/${loadBagID}/${loadBagID}_externalpanel.png`,
+        bottom: `orders/${loadBagID}/${loadBagID}_bottompanel.png`
+      };
+
+      console.log("Image paths:", imagePaths);
+
+      const loadPromises = [];
+
+      // Load each panel image using S3 API
+      for (const [panelName, imagePath] of Object.entries(imagePaths)) {
+        console.log(`Loading ${panelName} from S3 key:`, imagePath);
+
+        const loadPromise = new Promise((resolve, reject) => {
+          // Use S3 API getObject to fetch the image
+          s3.getObject({ Key: imagePath }, (err, data) => {
+            if (err) {
+              console.error(`Failed to get ${panelName} from S3:`, err);
+              reject(err);
+              return;
+            }
+
+            console.log(`${panelName} blob received from S3`);
+
+            // Convert blob to image
+            const blob = data.Body;
+            const objectUrl = URL.createObjectURL(blob);
+
+            const img = new Image();
+
+            img.onload = function() {
+              console.log(`${panelName} image loaded successfully`);
+              console.log(`Image dimensions: ${img.width}x${img.height}`);
+
+              // Clean up the object URL
+              URL.revokeObjectURL(objectUrl);
+
+              // Get the panel configuration
+              const panel = fabricPanels[panelName];
+              if (!panel) {
+                console.error(`Panel not found: ${panelName}`);
+                reject(new Error(`Panel not found: ${panelName}`));
+                return;
+              }
+
+              // Set the image
+              panel.image = img;
+
+              // Scale the image to fill the entire canvas (cover mode)
+              const imageAspect = img.width / img.height;
+              const canvasAspect = panel.svgWidth / panel.svgHeight;
+
+              if (imageAspect > canvasAspect) {
+                // Image is wider - fit to height (fill vertically)
+                panel.scale = panel.svgHeight / img.height;
+              } else {
+                // Image is taller - fit to width (fill horizontally)
+                panel.scale = panel.svgWidth / img.width;
+              }
+
+              // Center the image
+              panel.x = (panel.svgWidth - img.width * panel.scale) / 2;
+              panel.y = (panel.svgHeight - img.height * panel.scale) / 2;
+
+              console.log(`Applied ${panelName} to panel:`, {
+                scale: panel.scale,
+                x: panel.x,
+                y: panel.y
+              });
+
+              resolve();
+            };
+
+            img.onerror = function(error) {
+              console.error(`Failed to load ${panelName} image from blob`);
+              console.error("Error:", error);
+              URL.revokeObjectURL(objectUrl);
+              reject(new Error(`Failed to load ${panelName} image`));
+            };
+
+            img.src = objectUrl;
+          });
+        });
+
+        loadPromises.push(loadPromise);
+      }
+
+      // Wait for all images to load
+      try {
+        await Promise.all(loadPromises);
+        console.log("All bag images loaded successfully");
+
+        // Re-render the 2D canvas
+        if (window.render2DCanvas) {
+          window.render2DCanvas();
+          console.log("2D canvas re-rendered with loaded images");
+        }
+
+        return true;
+      } catch (error) {
+        console.error("Failed to load some bag images:", error);
+        throw error;
+      }
     }
 
     function makeId(length) {
