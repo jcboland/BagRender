@@ -40,6 +40,7 @@
 
     .panel-section {
       margin-bottom: 20px;
+      margin-top: 20px;
     }
 
     .panel-section h3 {
@@ -52,20 +53,21 @@
 
     .file-input-wrapper {
       display: flex;
-      gap: 10px;
+      gap: 5 px;
       align-items: center;
       margin-bottom: 10px;
+      margin-top: 20px;
     }
 
     .file-input-wrapper label {
       flex: 1;
       display: block;
-      font-size: 13px;
+      font-size: 16px;
       color: #444;
     }
 
     .file-input-wrapper input[type="file"] {
-      font-size: 12px;
+      font-size: 16px;
     }
 
     #panel-toggle-buttons {
@@ -95,6 +97,32 @@
       background: #507CBC;
       color: white;
       border-color: #507CBC;
+    }
+
+    .library-btn {
+      width: 100%;
+      padding: 10px 15px;
+      margin-top: 10px;
+      background: white;
+      color: #507CBC;
+      border: 2px solid #507CBC;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .library-btn:hover {
+      background: #507CBC;
+      color: white;
+    }
+
+    .library-btn:hover svg {
+      stroke: white;
     }
 
     #generate-btn {
@@ -163,17 +191,168 @@
       height: 100%;
       display: block;
     }
+
+    /* Image Library Sidebar */
+    #fabric-menu-side {
+      position: fixed;
+      right: -350px;
+      top: 0;
+      width: 350px;
+      height: 100vh;
+      background: white;
+      box-shadow: -2px 0 10px rgba(0,0,0,0.2);
+      transition: right 0.3s ease;
+      z-index: 1000;
+      overflow-y: auto;
+    }
+
+    #fabric-menu-side.open {
+      right: 0;
+    }
+
+    #fabric-toggle {
+      position: fixed;
+      right: 10px;
+      top: 10px;
+      width: 50px;
+      height: 50px;
+      background: #507CBC;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 1001;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+    }
+
+    #fabric-toggle:hover {
+      background: #3d5f99;
+      transform: scale(1.05);
+    }
+
+    #fabric-toggle.open {
+      right: 360px;
+    }
+
+    .image-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      padding: 20px;
+    }
+
+    .image-item {
+      aspect-ratio: 1;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: #f9f9f9;
+    }
+
+    .image-item:hover {
+      border-color: #507CBC;
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(80, 124, 188, 0.3);
+    }
+
+    .image-item.selected {
+      border-color: #507CBC;
+      border-width: 3px;
+      box-shadow: 0 4px 12px rgba(80, 124, 188, 0.5);
+    }
+
+    .image-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
   </style>
 </head>
 <body>
+    <button id="fabric-toggle" type="button" aria-controls="fabric-menu-side" aria-expanded="false" title="Show image library">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7" />
+        <rect x="14" y="3" width="7" height="7" />
+        <rect x="3" y="14" width="7" height="7" />
+        <rect x="14" y="14" width="7" height="7" />
+      </svg>
+    </button>
+
+    <div
+      id="fabric-menu-side"
+      data-bucket="wompatuck-prints"
+      data-prefix="prints/"
+      data-baseurl="https://wompatuck-prints.s3.us-west-1.amazonaws.com/"
+      data-max="1000"
+    ></div>
+    <script src="sidebar.js"></script>
+    <script>
+      // Toggle sidebar functionality
+      document.addEventListener('DOMContentLoaded', function() {
+        const toggleBtn = document.getElementById('fabric-toggle');
+        const sidebar = document.getElementById('fabric-menu-side');
+
+        console.log('Toggle button:', toggleBtn);
+        console.log('Sidebar:', sidebar);
+
+        if (!toggleBtn) {
+          console.error('Toggle button not found!');
+          return;
+        }
+        if (!sidebar) {
+          console.error('Sidebar not found!');
+          return;
+        }
+
+        // Function to toggle sidebar
+        function toggleSidebar() {
+          console.log('Toggling sidebar...');
+          const isOpen = sidebar.classList.toggle('open');
+          toggleBtn.classList.toggle('open', isOpen);
+          toggleBtn.setAttribute('aria-expanded', isOpen);
+          toggleBtn.setAttribute('title', isOpen ? 'Hide image library' : 'Show image library');
+          console.log('Sidebar is now:', isOpen ? 'open' : 'closed');
+        }
+
+        // Attach to floating toggle button
+        toggleBtn.addEventListener('click', function(e) {
+          console.log('Floating toggle button clicked!');
+          toggleSidebar();
+        });
+
+        // Attach to print library button
+        const printLibraryBtn = document.getElementById('print-library-btn');
+        if (printLibraryBtn) {
+          printLibraryBtn.addEventListener('click', function(e) {
+            console.log('Print Library button clicked!');
+            toggleSidebar();
+          });
+          console.log('Print Library button listener attached');
+        }
+
+        console.log('Toggle button event listeners attached');
+
+        
+      });
+
+
+    </script>
+
+
   <div id="container">
     <!-- Left Panel: 2D Fabric Positioning -->
     <div id="left-panel">
       <div id="controls-header">
-        <h1>Fabric Positioning</h2>
-
+        <h1>Design Your Feedbag</h2>
+      <div id="instructions">Use this tool to design your Feedbag exactly as you like it. Select one of the prints from our library or upload your own, then see what it looks like with interactive 3D Viewer.</div>
         <div class="panel-section">
           <h2>Panel Selection</h3>
+           
           <div id="panel-toggle-buttons">
             <button class="toggle-btn active" data-panel="external" >External Panel</button>
             <button class="toggle-btn" data-panel="bottom" >Bottom Panel</button>
@@ -181,11 +360,21 @@
         </div>
 
         <div class="panel-section">
-          <h2 id="current-panel-name">External Panel</h3>
+          <h2 id="current-panel-name">Current Panel: External</h3>
+          <button id="print-library-btn" class="library-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;">
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+            </svg>
+            Print Library
+          </button>
           <div class="file-input-wrapper">
-            <label>Upload Image:</label>
+            <label>Upload Your Own Image:</label>
             <input type="file" id="fabric-img-input" accept="image/*" />
           </div>
+
         </div>
 
         <button id="generate-btn" >Generate 3D Preview</button>
@@ -313,7 +502,7 @@
         displayScale: 1,
         displayOffsetX: 0,
         displayOffsetY: 0,
-        label: 'External Panel'
+        label: 'Current Panel: External'
       },
       bottom: {
         image: null,
@@ -328,7 +517,7 @@
         displayScale: 1,
         displayOffsetX: 0,
         displayOffsetY: 0,
-        label: 'Bottom Panel'
+        label: 'Current Panel: Bottom'
       }
     };
 
@@ -340,6 +529,11 @@
     let lastY = 0;
     let canvasContainerWidth = 0;
     let canvasContainerHeight = 0;
+
+    // Expose to global scope for sidebar.js
+    window.fabricPanels = fabricPanels;
+    window.currentPanel = currentPanel;
+    
 
     // Initialize 2D canvas
     function init2DCanvas() {
@@ -433,6 +627,7 @@
 
     function switchToPanel(panelName) {
       currentPanel = panelName;
+      window.currentPanel = panelName; // Update global reference
 
       // Update toggle buttons
       document.querySelectorAll('.toggle-btn').forEach(btn => {
@@ -663,6 +858,9 @@
 
       fabricCtx.restore();
     }
+
+    // Expose render2DCanvas to global scope for sidebar.js
+    window.render2DCanvas = render2DCanvas;
 
     function drawCheckerboard(ctx, width, height) {
       const squareSize = 20;
@@ -1341,6 +1539,8 @@
       controls.update();
       renderer.render(scene, camera);
     }
+
+    
   </script>
 </body>
 </html>
