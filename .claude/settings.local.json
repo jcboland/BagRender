@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /s /b *.jpg *.png *.jpeg)",
+      "Bash(mkdir -p textures)",
+      "Bash(mv *.jpg *.png textures/)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
