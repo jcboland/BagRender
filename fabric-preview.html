@@ -146,6 +146,15 @@
       background: #1e7e34;
     }
 
+    #bag-id-display {
+      margin-top: 10px;
+      padding: 8px 12px;
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      text-align: center;
+    }
+
     #canvas-container {
       flex: 1;
       position: relative;
@@ -440,6 +449,10 @@
         </div>
 
         <button id="generate-btn" >Generate 3D Preview</button>
+        <div id="bag-id-display" style="display: none;">
+          <span style="font-size: 12px; color: #666;">Bag ID:</span>
+          <span id="bag-id-value" style="font-size: 13px; font-weight: 600; color: #507CBC; margin-left: 5px;"></span>
+        </div>
       </div>
 
       <div id="canvas-container">
@@ -455,6 +468,7 @@
       <canvas id="c"></canvas>
     </div>
   </div>
+  <script src="s3-api.js"></script>
 
   <script type="importmap">
     {
@@ -468,6 +482,7 @@
   </script>
 
   <script type="module">
+
     import * as THREE from 'three';
     import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
     import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
@@ -591,12 +606,63 @@
     let lastY = 0;
     let canvasContainerWidth = 0;
     let canvasContainerHeight = 0;
+    let bagID = null; // Global bag ID variable
 
-    // Expose to global scope for sidebar.js
+    var albumBucketName = "wompatuck";
+    var bucketRegion = "us-west-1";
+    var IdentityPoolId = "us-west-1:a0541646-8d27-460f-91d9-dee5971fd529";
+
+    // API Configuration for S3 uploads
+    var S3_API_URL = "https://2olvl8lo8b.execute-api.us-west-1.amazonaws.com/prod";
+    var s3 = new S3API(S3_API_URL);
+
+    // Expose to global scope for sidebar.js and other external scripts
     window.fabricPanels = fabricPanels;
     window.currentPanel = currentPanel;
-    
 
+
+    function setBagID(){
+      // First Check if there is a code in the URL
+      // Check if there is anything to load based on the webpage address
+      // Get the value from the webpage
+      // const urlParams = new URLSearchParams(window.location.search);
+      // let myValue = urlParams.get('bagid');
+      // bagID = myValue;
+
+      // Create a new Bag ID
+      const currDate = new Date();
+      bagID = "";
+      bagID += currDate.getFullYear();
+      bagID += currDate.getMonth() + 1;
+      bagID += currDate.getDate();
+      bagID += makeId(5);
+
+      // Report the Bag ID number
+      console.log("Bag ID: " + bagID);
+      console.log("Bag ID Setting: " + bagID);
+      localStorage.setItem('bagID', bagID);
+      window.parent.postMessage({ key: 'bagID', value: bagID }, '*');
+
+      // Also expose to global scope for external access
+      window.bagID = bagID;
+
+      return bagID;
+    }
+
+    function makeId(length) {
+      let result = '';
+      // const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      const charactersLength = characters.length;
+      let counter = 0;
+      while (counter < length) {
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
+        counter += 1;
+      }
+      return result;
+    }
+    
+    
     // Initialize 2D canvas
     function init2DCanvas() {
       // Get canvas container dimensions
@@ -618,6 +684,8 @@
         panel.displayOffsetY = (canvasContainerHeight - displayHeight) / 2;
       }
 
+      // Set Bag ID
+      setBagID();
       // Set initial canvas size
       updateCanvasSize();
 
@@ -986,6 +1054,53 @@
       return textures;
     }
 
+    // Generate raw (uncropped) textures from the positioned images
+    async function generateRawTextures() {
+      const textures = {};
+
+      // Resolution multiplier for higher quality textures (same as cropped)
+      const TEXTURE_RESOLUTION_SCALE = 4;
+
+      for (const [panelName, panel] of Object.entries(fabricPanels)) {
+        if (!panel.image) {
+          console.log(`Skipping raw ${panelName}: no image`);
+          continue;
+        }
+
+        console.log(`Generating raw texture for ${panelName}:`, {
+          svgSize: `${panel.svgWidth}x${panel.svgHeight}`,
+          outputSize: `${panel.svgWidth * TEXTURE_RESOLUTION_SCALE}x${panel.svgHeight * TEXTURE_RESOLUTION_SCALE}`,
+          imageSize: `${panel.image.width}x${panel.image.height}`,
+          position: `x=${panel.x}, y=${panel.y}`,
+          scale: panel.scale
+        });
+
+        // Create an offscreen canvas for this panel at higher resolution
+        const offCanvas = document.createElement('canvas');
+        offCanvas.width = panel.svgWidth * TEXTURE_RESOLUTION_SCALE;
+        offCanvas.height = panel.svgHeight * TEXTURE_RESOLUTION_SCALE;
+        const offCtx = offCanvas.getContext('2d');
+
+        // Scale the context to render at higher resolution
+        offCtx.scale(TEXTURE_RESOLUTION_SCALE, TEXTURE_RESOLUTION_SCALE);
+
+        // Draw white background
+        offCtx.fillStyle = '#ffffff';
+        offCtx.fillRect(0, 0, panel.svgWidth, panel.svgHeight);
+
+        // Draw the positioned image WITHOUT clipping
+        const imgWidth = panel.image.width * panel.scale;
+        const imgHeight = panel.image.height * panel.scale;
+        offCtx.drawImage(panel.image, panel.x, panel.y, imgWidth, imgHeight);
+
+        // Convert to texture with high quality
+        textures[panelName] = offCanvas.toDataURL('image/png');
+        console.log(`Generated raw ${panelName} texture at ${offCanvas.width}x${offCanvas.height}, data URL length: ${textures[panelName].length}`);
+      }
+
+      return textures;
+    }
+
     // Download the cropped texture images
     function downloadCroppedImages(fabricTextures) {
       let delay = 0;
@@ -1010,6 +1125,150 @@
         delay += 100; // 100ms delay between downloads
       }
     }
+
+    
+async function savetoS3(fabricTextures, rawTextures){
+  console.log("Saving Pattern Images to S3...");
+
+  if (!fabricTextures) {
+    console.error("No fabric textures provided to savetoS3");
+    return;
+  }
+
+  // Map panel names to S3 keys for cropped images
+  const s3KeyMap = {
+    'external': "orders/" + bagID + "/" + bagID + "_externalpanel.png",
+    'bottom': "orders/" + bagID + "/" + bagID + "_bottompanel.png"
+  };
+
+  // Map panel names to S3 keys for raw images
+  const s3KeyMapRaw = {
+    'external': "orders/" + bagID + "/" + bagID + "_externalpanel_raw.png",
+    'bottom': "orders/" + bagID + "/" + bagID + "_bottompanel_raw.png"
+  };
+
+  console.log("S3 upload paths (cropped):", s3KeyMap);
+  console.log("S3 upload paths (raw):", s3KeyMapRaw);
+
+  // Helper function to convert data URL to Blob
+  function dataURLtoBlob(dataURL) {
+    const arr = dataURL.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+  }
+
+  // Upload each panel (cropped and raw)
+  const uploadPromises = [];
+
+  // Upload cropped images
+  for (const [panelName, dataUrl] of Object.entries(fabricTextures)) {
+    if (!dataUrl) {
+      console.log(`Skipping cropped ${panelName}: no data URL`);
+      continue;
+    }
+
+    const s3Key = s3KeyMap[panelName];
+    if (!s3Key) {
+      console.log(`Skipping cropped ${panelName}: no S3 key mapping`);
+      continue;
+    }
+
+    console.log(`Uploading cropped ${panelName} to ${s3Key}...`);
+
+    // Convert data URL to Blob
+    const blob = dataURLtoBlob(dataUrl);
+
+    // Create upload promise
+    const uploadPromise = new Promise((resolve, reject) => {
+      const params = {
+        Key: s3Key,
+        Body: blob,
+        ContentType: 'image/png'
+      };
+
+      s3.upload(params)
+        .on('httpUploadProgress', progress => {
+          const percentComplete = Math.round((progress.loaded / progress.total) * 100);
+          console.log(`Upload progress for cropped ${panelName}: ${percentComplete}%`);
+        })
+        .send((err, res) => {
+          if (err) {
+            console.error(`Error uploading cropped ${panelName}:`, err);
+            reject(err);
+          } else {
+            console.log(`Successfully uploaded cropped ${panelName} to S3:`, res.key);
+            resolve(res);
+          }
+        });
+    });
+
+    uploadPromises.push(uploadPromise);
+  }
+
+  // Upload raw images if provided
+  if (rawTextures) {
+    for (const [panelName, dataUrl] of Object.entries(rawTextures)) {
+      if (!dataUrl) {
+        console.log(`Skipping raw ${panelName}: no data URL`);
+        continue;
+      }
+
+      const s3Key = s3KeyMapRaw[panelName];
+      if (!s3Key) {
+        console.log(`Skipping raw ${panelName}: no S3 key mapping`);
+        continue;
+      }
+
+      console.log(`Uploading raw ${panelName} to ${s3Key}...`);
+
+      // Convert data URL to Blob
+      const blob = dataURLtoBlob(dataUrl);
+
+      // Create upload promise
+      const uploadPromise = new Promise((resolve, reject) => {
+        const params = {
+          Key: s3Key,
+          Body: blob,
+          ContentType: 'image/png'
+        };
+
+        s3.upload(params)
+          .on('httpUploadProgress', progress => {
+            const percentComplete = Math.round((progress.loaded / progress.total) * 100);
+            console.log(`Upload progress for raw ${panelName}: ${percentComplete}%`);
+          })
+          .send((err, res) => {
+            if (err) {
+              console.error(`Error uploading raw ${panelName}:`, err);
+              reject(err);
+            } else {
+              console.log(`Successfully uploaded raw ${panelName} to S3:`, res.key);
+              resolve(res);
+            }
+          });
+      });
+
+      uploadPromises.push(uploadPromise);
+    }
+  }
+
+  // Wait for all uploads to complete
+  try {
+    const results = await Promise.all(uploadPromises);
+    console.log("All images uploaded successfully!");
+    return results;
+  } catch (error) {
+    console.error("Error uploading images to S3:", error);
+    throw error;
+  }
+}
+
 
     // ═══════════════════════════════════════════════════════════════
     // 3D MODEL RENDERING
@@ -1307,6 +1566,14 @@
     async function generatePreview() {
       console.log("Generating 3D Preview...");
 
+      // Display Bag ID
+      const bagIdDisplay = document.getElementById('bag-id-display');
+      const bagIdValue = document.getElementById('bag-id-value');
+      if (bagIdDisplay && bagIdValue && bagID) {
+        bagIdValue.textContent = bagID;
+        bagIdDisplay.style.display = 'block';
+      }
+
       // Show loading indicator
       const loadingOverlay = document.getElementById('loading-overlay');
       if (loadingOverlay) {
@@ -1361,6 +1628,16 @@
 
       // Generate textures from the 2D canvas
       const fabricTextures = await generateFabricTextures();
+      const rawTextures = await generateRawTextures();
+
+      // Upload both cropped and raw images to S3
+      try {
+        await savetoS3(fabricTextures, rawTextures);
+        console.log("Fabric textures (cropped and raw) uploaded to S3 successfully");
+      } catch (error) {
+        console.error("Failed to upload textures to S3:", error);
+        // Continue with rendering even if upload fails
+      }
 
       // Download the cropped images for debugging
       //downloadCroppedImages(fabricTextures);
