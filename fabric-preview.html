@@ -486,14 +486,13 @@
     <!-- Left Panel: 2D Fabric Positioning -->
     <div id="left-panel">
       <div id="controls-header">
-        <h1>Design Your Feedbag</h2>
-      <div id="instructions">Use this tool to design your Feedbag exactly as you like it. Select one of the prints from our library or upload your own, then see what it looks like with interactive 3D Viewer.</div>
+        <h1 id="bag-title">Design Your Bag</h1>
+        <div id="instructions">Use this tool to design your bag exactly as you like it. Select one of the prints from our library or upload your own, then see what it looks like with interactive 3D Viewer.</div>
         <div class="panel-section">
-          <h2>1. Select a Panel</h3>
-           
+          <h2>1. Select a Panel</h2>
+
           <div id="panel-toggle-buttons">
-            <button class="toggle-btn active" data-panel="external" >External Panel</button>
-            <button class="toggle-btn" data-panel="bottom" >Bottom Panel</button>
+            <!-- Buttons will be dynamically generated based on bag configuration -->
           </div>
         </div>
 
@@ -566,73 +565,234 @@
     import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
     // ═══════════════════════════════════════════════════════════════
-    // CONFIGURATION: Map each OBJ body/group to a texture or material
+    // BAG CONFIGURATIONS
     // ═══════════════════════════════════════════════════════════════
     //
-    // HOW TO USE:
-    // 1. Find your body/group name from FeedbagOBJ.obj (e.g., "Pattern_25178")
-    // 2. For textures: { type: "texture", image: "filename.png" }
-    //    - Use filename only (e.g., "Donut.png") - will use imageBasePath below
-    //    - Or use full URL (e.g., "https://example.com/texture.jpg")
-    // 3. For solid colors: { type: "color", color: 0xRRGGBB }
-    //    - Example: 0xeeeeee (light gray), 0xff0000 (red), 0x000000 (black)
-    // 4. Bodies not listed will default to black (0x000000)
+    // This section defines all bag types and their customizable panels.
+    // The software will adapt automatically based on the selected configuration.
     //
-    const BODY_MATERIAL_MAP = {
-      // Bodies with texture images - specify the image filename or URL
-      "Pattern_25178": { type: "texture", image: "Donut.png" },
-      "Pattern_4474": { type: "texture", image: "Donut.png" },
-      //"Pattern_304806": { type: "texture", image: "mesh.png" },
-      //"Pattern_304806": { type: "texture", image: "Donut.png" },
-      
-      // Bodies with solid colors - specify hex color (e.g., 0xeeeeee, 0xff0000)
-      "Pattern_304806": { type: "color", color: 0x80FFFFFF },
-      "Pattern_157054": { type: "color", color: 0xeeeeee },
-      "Pattern_157053": { type: "color", color: 0xeeeeee },
-      "Pattern_700495": { type: "color", color: 0xeeeeee },
+    // HOW TO ADD A NEW BAG TYPE:
+    // 1. Add a new entry to BAG_CONFIGS with a unique key (e.g., "mystyle")
+    // 2. Configure the following properties:
+    //
+    //    name: Display name shown to users (e.g., "My Style Bag")
+    //    objURL: Full URL to the 3D model OBJ file
+    //    mtlURL: Filename or URL to the MTL material file
+    //    imageBasePath: Base URL where texture images are stored
+    //
+    //    panels: Array of customizable panels, each with:
+    //      - id: Unique identifier (e.g., "front", "back", "side")
+    //            Used in filenames: {bagID}_{id}panel.png
+    //      - label: Display name for the panel (e.g., "Front Panel")
+    //      - svgPath: Path to SVG clipping mask file
+    //      - svgWidth: Width of the SVG clipping mask in pixels
+    //      - svgHeight: Height of the SVG clipping mask in pixels
+    //      - objPart: Name of the 3D model mesh to apply texture to
+    //                 (Find this in your OBJ file, e.g., "Pattern_25178")
+    //      - textureOffset: { x, y } - Fine-tune texture position on 3D model
+    //                       (0.5, 0.5 = centered, adjust to fix alignment)
+    //      - textureRepeat: { x, y } - Scale/stretch texture on 3D model
+    //                       (1.0 = normal, >1 = compressed, <1 = stretched)
+    //
+    //    bodyMaterialMap: Define materials for non-customizable parts
+    //      - Use { type: "color", color: 0xRRGGBB } for solid colors
+    //      - Parts not listed default to black or MTL material if available
+    //
+    // 3. Users can then load your bag with: ?config=mystyle
+    //    Or set it as the default by changing line 709
+    //
+    // EXAMPLE:
+    //   mybag: {
+    //     name: "My Bag",
+    //     objURL: "https://example.com/mybag.obj",
+    //     mtlURL: "mybag.mtl",
+    //     imageBasePath: "https://example.com/textures/",
+    //     panels: [
+    //       {
+    //         id: "main",
+    //         label: "Main Panel",
+    //         svgPath: "MyBagMain.svg",
+    //         svgWidth: 800,
+    //         svgHeight: 600,
+    //         objPart: "Pattern_Main",
+    //         textureOffset: { x: 0.5, y: 0.5 },
+    //         textureRepeat: { x: 1.0, y: 1.0 }
+    //       }
+    //     ],
+    //     bodyMaterialMap: {
+    //       "Pattern_Straps": { type: "color", color: 0x000000 }
+    //     }
+    //   }
+    //
+    // ═══════════════════════════════════════════════════════════════
+    const BAG_CONFIGS = {
+      feedbag: {
+        name: "Feedbag",
+        objURL: "https://wompatuck-prints.s3.us-west-1.amazonaws.com/render/FeedbagOBJ.obj",
+        mtlURL: "FeedbagOBJ.mtl",
+        imageBasePath: "https://wompatuck-prints.s3.us-west-1.amazonaws.com/render/",
+        panels: [
+          {
+            id: "external",
+            label: "External Panel",
+            svgPath: "ExternalPanel.svg",
+            svgWidth: 900,
+            svgHeight: 550,
+            objPart: "Pattern_25178",  // 3D model part name
+            textureOffset: { x: 0.5, y: 0.5 },
+            textureRepeat: { x: 0.85, y: 1.30 }
+          },
+          {
+            id: "bottom",
+            label: "Bottom Panel",
+            svgPath: "BottomOutline.svg",
+            svgWidth: 288,
+            svgHeight: 288,
+            objPart: "Pattern_4474",
+            textureOffset: { x: 0.5, y: 0.5 },
+            textureRepeat: { x: 2.5, y: 2.5 }
+          }
+        ],
+        bodyMaterialMap: {
+          // Solid color parts
+          "Pattern_304806": { type: "color", color: 0x80FFFFFF },
+          "Pattern_157054": { type: "color", color: 0xeeeeee },
+          "Pattern_157053": { type: "color", color: 0xeeeeee },
+          "Pattern_700495": { type: "color", color: 0xeeeeee }
+        }
+      },
 
-      // All other bodies not listed above will default to black (0x000000)
-      // Add more bodies here as needed:
-      // "Pattern_4474": { type: "color", color: 0xff0000 },
-       //"Pattern_4474": { type: "texture", image: "MyFabric.png" },
-      // "Pattern_25189": { type: "texture", image: "https://example.com/texture.jpg" },
+      handlebar: {
+        name: "Handlebar Bag",
+        objURL: "https://wompatuck-prints.s3.us-west-1.amazonaws.com/render/HandlebarOBJ.obj",
+        mtlURL: "HandlebarOBJ.mtl",
+        imageBasePath: "https://wompatuck-prints.s3.us-west-1.amazonaws.com/render/",
+        panels: [
+          {
+            id: "main",
+            label: "Main Panel",
+            svgPath: "Handlebar Pattern MASTER_External.svg",
+            svgWidth: 1039,
+            svgHeight: 539,
+            objPart: "Pattern_686559",
+            textureOffset: { x: 0.5, y: 0.5 },
+            textureRepeat: { x: 1.0, y: 1.0 }
+          },
+          {
+            id: "left",
+            label: "Left Panel",
+            svgPath: "Handlebar Pattern MASTER_EndCap.svg",
+            svgWidth: 400,
+            svgHeight: 400,
+            objPart: "Pattern_177517",
+            textureOffset: { x: 0.5, y: 0.5 },
+            textureRepeat: { x: 1.0, y: 1.0 }
+          },
+                    {
+            id: "right",
+            label: "Right Panel",
+            svgPath: "Handlebar Pattern MASTER_EndCap.svg",
+            svgWidth: 400,
+            svgHeight: 400,
+            objPart: "Pattern_177518",
+            textureOffset: { x: 0.5, y: 0.5 },
+            textureRepeat: { x: 1.0, y: 1.0 }
+          }
+        ],
+        bodyMaterialMap: {
+          "Pattern_686560": { type: "color", color: 0x000000 },
+          "Pattern_686561": { type: "color", color: 0xFFFFFF }
+        }
+      },
+
+      minishoulder: {
+        name: "Mini Shoulder Bag",
+        objURL: "https://wompatuck-prints.s3.us-west-1.amazonaws.com/render/MiniShoulderOBJ.obj",
+        mtlURL: "MiniShoulderOBJ.mtl",
+        imageBasePath: "https://wompatuck-prints.s3.us-west-1.amazonaws.com/render/",
+        panels: [
+          {
+            id: "front",
+            label: "Front Panel",
+            svgPath: "MiniShoulderFront.svg",
+            svgWidth: 400,
+            svgHeight: 400,
+            objPart: "Pattern_Front",
+            textureOffset: { x: 0.5, y: 0.5 },
+            textureRepeat: { x: 1.0, y: 1.0 }
+          },
+                    {
+            id: "right",
+            label: "Right Panel",
+            svgPath: "MiniShoulderFront.svg",
+            svgWidth: 400,
+            svgHeight: 400,
+            objPart: "Pattern_Front",
+            textureOffset: { x: 0.5, y: 0.5 },
+            textureRepeat: { x: 1.0, y: 1.0 }
+          },
+          {
+            id: "left",
+            label: "Left Panel",
+            svgPath: "MiniShoulderBack.svg",
+            svgWidth: 400,
+            svgHeight: 400,
+            objPart: "Pattern_Back",
+            textureOffset: { x: 0.5, y: 0.5 },
+            textureRepeat: { x: 1.0, y: 1.0 }
+          }
+        ],
+        bodyMaterialMap: {
+          "Pattern_Strap": { type: "color", color: 0x000000 },
+          "Pattern_Zipper": { type: "color", color: 0x808080 }
+        }
+      },
+
+      toolroll: {
+        name: "Tool Roll",
+        objURL: "https://wompatuck-prints.s3.us-west-1.amazonaws.com/render/ToolRollOBJ.obj",
+        mtlURL: "ToolRollOBJ.mtl",
+        imageBasePath: "https://wompatuck-prints.s3.us-west-1.amazonaws.com/render/",
+        panels: [
+          {
+            id: "outer",
+            label: "Outer Panel",
+            svgPath: "ToolRollOuter.svg",
+            svgWidth: 600,
+            svgHeight: 300,
+            objPart: "Pattern_Outer",
+            textureOffset: { x: 0.5, y: 0.5 },
+            textureRepeat: { x: 1.0, y: 1.0 }
+          }
+        ],
+        bodyMaterialMap: {
+          "Pattern_Pockets": { type: "color", color: 0x000000 },
+          "Pattern_Straps": { type: "color", color: 0x808080 }
+        }
+      }
     };
 
-    // Default OBJ file URL or path
-    const objURL = 'https://wompatuck-prints.s3.us-west-1.amazonaws.com/render/FeedbagOBJ.obj';
+    // Get the selected bag config from URL parameter (default: feedbag)
+    const urlParams = new URLSearchParams(window.location.search);
+    const selectedConfigKey = urlParams.get('config') || 'feedbag';
+    const CURRENT_BAG_CONFIG = BAG_CONFIGS[selectedConfigKey] || BAG_CONFIGS.feedbag;
 
-    // Default MTL file URL or path
-    const mtlURL = 'FeedbagOBJ.mtl';
+    console.log('Selected bag configuration:', selectedConfigKey, CURRENT_BAG_CONFIG);
 
-    // Base path for local images (leave empty if using full URLs)
-    const imageBasePath = 'https://wompatuck-prints.s3.us-west-1.amazonaws.com/render/';
+    // Extract configuration values for backward compatibility
+    const BODY_MATERIAL_MAP = CURRENT_BAG_CONFIG.bodyMaterialMap;
+    const objURL = CURRENT_BAG_CONFIG.objURL;
+    const mtlURL = CURRENT_BAG_CONFIG.mtlURL;
+    const imageBasePath = CURRENT_BAG_CONFIG.imageBasePath;
 
-    // Texture offset adjustments for centering on 3D model
-    // Adjust these values to center the texture on each part
-    // Positive values move texture right/up, negative values move left/down
-    const TEXTURE_OFFSETS = {
-      external: { x: 0.5, y: 0.5 },  // Offset for Pattern_25178 (External Panel)
-      bottom: { x: 0.5, y: 0.5 }     // Offset for Pattern_4474 (Bottom Panel)
-    };
+    // Build texture offsets and repeats from panel configs
+    const TEXTURE_OFFSETS = {};
+    const TEXTURE_REPEAT = {};
+    CURRENT_BAG_CONFIG.panels.forEach(panel => {
+      TEXTURE_OFFSETS[panel.id] = panel.textureOffset;
+      TEXTURE_REPEAT[panel.id] = panel.textureRepeat;
+    });
 
-    // Texture repeat/scale adjustments to fix aspect ratio issues
-    // Adjust these if texture appears stretched in one direction
-    // Values > 1 = texture compressed/repeated, < 1 = texture stretched
-    // For external: if image doesn't reach full width, DECREASE x value (e.g., 0.8)
-    //               if image is stretched vertically, DECREASE y value
-    const TEXTURE_REPEAT = {
-      external: { x: 0.85, y: 1.30 },  // Adjusted: decreased x to stretch horizontally
-      bottom: { x: 2.5, y: 2.5 }      // Repeat for Pattern_4474 (Bottom Panel)
-    };
-
-    // AVAILABLE BODIES IN FeedbagOBJ.obj:
-    // Pattern_4474, Pattern_25178, Pattern_25179, Pattern_4474, Pattern_25185,
-    // Pattern_25191, Pattern_304806, Pattern_700495, Pattern_25189, Pattern_25192,
-    // Pattern_157053, Pattern_157054, Pattern_453128, Pattern_453129, Pattern_453130,
-    // Pattern_453132, Pattern_453134, Pattern_453135, Pattern_453131, pHelix1 group1,
-    // Topstitch_740533, Topstitch_740535, Topstitch_740337, Topstitch_740339,
-    // Topstitch_751414, Topstitch_752179, Topstitch_742399, Topstitch_742782,
-    // Topstitch_89825, Topstitch_97308, Topstitch_89908, Topstitch_97311
     // ═══════════════════════════════════════════════════════════════
 
     // ═══════════════════════════════════════════════════════════════
@@ -641,41 +801,28 @@
     const fabricCanvas = document.getElementById('fabric-canvas');
     const fabricCtx = fabricCanvas.getContext('2d');
 
-    // State for the two fabric panels
-    const fabricPanels = {
-      external: {
+    // Build fabric panels dynamically from the current bag configuration
+    const fabricPanels = {};
+    CURRENT_BAG_CONFIG.panels.forEach(panelConfig => {
+      fabricPanels[panelConfig.id] = {
         image: null,
         x: 0,
         y: 0,
         scale: 1,
-        svgPath: 'ExternalPanel.svg',
-        svgWidth: 900,
-        svgHeight: 550,
+        svgPath: panelConfig.svgPath,
+        svgWidth: panelConfig.svgWidth,
+        svgHeight: panelConfig.svgHeight,
         clipPath: null,
         outlinePath: null,
         displayScale: 1,
         displayOffsetX: 0,
         displayOffsetY: 0,
-        label: 'Current Panel: External'
-      },
-      bottom: {
-        image: null,
-        x: 0,
-        y: 0,
-        scale: 1,
-        svgPath: 'BottomOutline.svg',
-        svgWidth: 288,
-        svgHeight: 288,
-        clipPath: null,
-        outlinePath: null,
-        displayScale: 1,
-        displayOffsetX: 0,
-        displayOffsetY: 0,
-        label: 'Current Panel: Bottom'
-      }
-    };
+        label: `Current Panel: ${panelConfig.label}`,
+        objPart: panelConfig.objPart  // Store the 3D model part name
+      };
+    });
 
-    let currentPanel = 'external'; // Which panel is currently being edited
+    let currentPanel = CURRENT_BAG_CONFIG.panels[0].id; // Start with the first panel
     let isDragging = false;
     let dragStartX = 0;
     let dragStartY = 0;
@@ -742,10 +889,11 @@
     async function loadBagFromS3(loadBagID) {
       console.log("Loading bag design from S3 for Bag ID:", loadBagID);
 
-      const imagePaths = {
-        external: `orders/${loadBagID}/${loadBagID}_externalpanel.png`,
-        bottom: `orders/${loadBagID}/${loadBagID}_bottompanel.png`
-      };
+      // Build image paths dynamically from panel configuration
+      const imagePaths = {};
+      CURRENT_BAG_CONFIG.panels.forEach(panelConfig => {
+        imagePaths[panelConfig.id] = `orders/${loadBagID}/${loadBagID}_${panelConfig.id}panel.png`;
+      });
 
       console.log("Image paths:", imagePaths);
 
@@ -860,9 +1008,35 @@
       return result;
     }
     
-    
+
+    // Initialize UI based on bag configuration
+    function initBagUI() {
+      // Update page title
+      const titleElement = document.getElementById('bag-title');
+      if (titleElement) {
+        titleElement.textContent = `Design Your ${CURRENT_BAG_CONFIG.name}`;
+      }
+
+      // Generate panel toggle buttons dynamically
+      const toggleButtonsContainer = document.getElementById('panel-toggle-buttons');
+      if (toggleButtonsContainer) {
+        toggleButtonsContainer.innerHTML = '';
+
+        CURRENT_BAG_CONFIG.panels.forEach((panelConfig, index) => {
+          const button = document.createElement('button');
+          button.className = 'toggle-btn' + (index === 0 ? ' active' : '');
+          button.dataset.panel = panelConfig.id;
+          button.textContent = panelConfig.label;
+          toggleButtonsContainer.appendChild(button);
+        });
+      }
+    }
+
     // Initialize 2D canvas
     function init2DCanvas() {
+      // Initialize UI
+      initBagUI();
+
       // Get canvas container dimensions
       const canvasContainer = document.getElementById('canvas-container');
       canvasContainerWidth = canvasContainer.clientWidth;
@@ -887,9 +1061,10 @@
       // Set initial canvas size
       updateCanvasSize();
 
-      // Load SVG clip paths
-      loadSVGClipPath('external');
-      loadSVGClipPath('bottom');
+      // Load SVG clip paths for all panels
+      for (const [key, panel] of Object.entries(fabricPanels)) {
+        loadSVGClipPath(key);
+      }
 
       // Setup event listeners
       document.getElementById('fabric-img-input').addEventListener('change', handleFabricImageUpload);
@@ -1388,17 +1563,14 @@ async function savetoS3(fabricTextures, rawTextures){
     return;
   }
 
-  // Map panel names to S3 keys for cropped images
-  const s3KeyMap = {
-    'external': "orders/" + bagID + "/" + bagID + "_externalpanel.png",
-    'bottom': "orders/" + bagID + "/" + bagID + "_bottompanel.png"
-  };
+  // Build S3 key mappings dynamically from panel configuration
+  const s3KeyMap = {};
+  const s3KeyMapRaw = {};
 
-  // Map panel names to S3 keys for raw images
-  const s3KeyMapRaw = {
-    'external': "orders/" + bagID + "/" + bagID + "_externalpanel_raw.png",
-    'bottom': "orders/" + bagID + "/" + bagID + "_bottompanel_raw.png"
-  };
+  CURRENT_BAG_CONFIG.panels.forEach(panelConfig => {
+    s3KeyMap[panelConfig.id] = `orders/${bagID}/${bagID}_${panelConfig.id}panel.png`;
+    s3KeyMapRaw[panelConfig.id] = `orders/${bagID}/${bagID}_${panelConfig.id}panel_raw.png`;
+  });
 
   console.log("S3 upload paths (cropped):", s3KeyMap);
   console.log("S3 upload paths (raw):", s3KeyMapRaw);
@@ -1898,87 +2070,42 @@ async function savetoS3(fabricTextures, rawTextures){
       const loader = new OBJLoader();
       const texLoader = new THREE.TextureLoader();
 
-      // Load custom textures from the 2D canvas
+      // Load custom textures from the 2D canvas dynamically
       const textureCache = {};
 
-      // Load external panel texture (Pattern_25178)
-      if (fabricTextures.external) {
-        const texture = texLoader.load(fabricTextures.external);
+      // Load textures for all configured panels
+      CURRENT_BAG_CONFIG.panels.forEach(panelConfig => {
+        if (fabricTextures[panelConfig.id]) {
+          const texture = texLoader.load(fabricTextures[panelConfig.id]);
 
-        // === WRAPPING OPTIONS ===
-        // THREE.ClampToEdgeWrapping - Stretches edge pixels (no repeat)
-        // THREE.RepeatWrapping - Tiles/repeats the texture
-        // THREE.MirroredRepeatWrapping - Tiles with mirroring
-        texture.wrapS = THREE.ClampToEdgeWrapping;
-        texture.wrapT = THREE.ClampToEdgeWrapping;
+          // === WRAPPING OPTIONS ===
+          texture.wrapS = THREE.ClampToEdgeWrapping;
+          texture.wrapT = THREE.ClampToEdgeWrapping;
 
-        // === REPEAT/SCALE ===
-        // repeat.set(x, y) - How many times texture repeats
-        // Values > 1 = texture repeats, < 1 = texture zooms in
-        texture.repeat.set(TEXTURE_REPEAT.external.x, TEXTURE_REPEAT.external.y);
+          // === REPEAT/SCALE ===
+          texture.repeat.set(TEXTURE_REPEAT[panelConfig.id].x, TEXTURE_REPEAT[panelConfig.id].y);
 
-        // === FLIP ===
-        texture.flipY = true;
+          // === FLIP ===
+          texture.flipY = true;
 
-        // === ROTATION ===
-        // texture.rotation = Math.PI / 2; // 90 degrees clockwise
-        // texture.center.set(0.5, 0.5); // Rotation center point (0.5, 0.5 = center)
+          // === OFFSET/POSITION ===
+          texture.offset.set(TEXTURE_OFFSETS[panelConfig.id].x, TEXTURE_OFFSETS[panelConfig.id].y);
 
-        // === OFFSET/POSITION ===
-        // offset.set(x, y) - Shifts texture position
-        // Positive = right/up, Negative = left/down
-        texture.offset.set(TEXTURE_OFFSETS.external.x, TEXTURE_OFFSETS.external.y);
+          console.log('═══════════════════════════════════════');
+          console.log(`${panelConfig.label.toUpperCase()} TEXTURE (${panelConfig.objPart})`);
+          console.log('═══════════════════════════════════════');
+          console.log('Texture Properties:');
+          console.log(`  - wrapS: ${texture.wrapS === THREE.ClampToEdgeWrapping ? 'ClampToEdgeWrapping' : texture.wrapS === THREE.RepeatWrapping ? 'RepeatWrapping' : 'MirroredRepeatWrapping'}`);
+          console.log(`  - wrapT: ${texture.wrapT === THREE.ClampToEdgeWrapping ? 'ClampToEdgeWrapping' : texture.wrapT === THREE.RepeatWrapping ? 'RepeatWrapping' : 'MirroredRepeatWrapping'}`);
+          console.log(`  - repeat: (${texture.repeat.x}, ${texture.repeat.y})`);
+          console.log(`  - offset: (${texture.offset.x}, ${texture.offset.y})`);
+          console.log(`  - rotation: ${texture.rotation} radians (${(texture.rotation * 180 / Math.PI).toFixed(1)}°)`);
+          console.log(`  - center: (${texture.center.x}, ${texture.center.y})`);
+          console.log(`  - flipY: ${texture.flipY}`);
 
-        console.log('═══════════════════════════════════════');
-        console.log('EXTERNAL PANEL TEXTURE (Pattern_25178)');
-        console.log('═══════════════════════════════════════');
-        console.log('Texture Properties:');
-        console.log(`  - wrapS: ${texture.wrapS === THREE.ClampToEdgeWrapping ? 'ClampToEdgeWrapping' : texture.wrapS === THREE.RepeatWrapping ? 'RepeatWrapping' : 'MirroredRepeatWrapping'}`);
-        console.log(`  - wrapT: ${texture.wrapT === THREE.ClampToEdgeWrapping ? 'ClampToEdgeWrapping' : texture.wrapT === THREE.RepeatWrapping ? 'RepeatWrapping' : 'MirroredRepeatWrapping'}`);
-        console.log(`  - repeat: (${texture.repeat.x}, ${texture.repeat.y})`);
-        console.log(`  - offset: (${texture.offset.x}, ${texture.offset.y})`);
-        console.log(`  - rotation: ${texture.rotation} radians (${(texture.rotation * 180 / Math.PI).toFixed(1)}°)`);
-        console.log(`  - center: (${texture.center.x}, ${texture.center.y})`);
-        console.log(`  - flipY: ${texture.flipY}`);
-        console.log('\nTo fix stretching, adjust TEXTURE_REPEAT at top of file:');
-        console.log('  - If stretched horizontally: increase external.x');
-        console.log('  - If stretched vertically: increase external.y');
-        console.log('  - If compressed: decrease the corresponding value');
-
-        textureCache['external'] = texture;
-      }
-
-      // Load bottom panel texture (Pattern_4474)
-      if (fabricTextures.bottom) {
-        const texture = texLoader.load(fabricTextures.bottom);
-
-        // === WRAPPING OPTIONS ===
-        texture.wrapS = THREE.ClampToEdgeWrapping;
-        texture.wrapT = THREE.ClampToEdgeWrapping;
-
-        // === REPEAT/SCALE ===
-        texture.repeat.set(TEXTURE_REPEAT.bottom.x, TEXTURE_REPEAT.bottom.y);
-
-        // === FLIP ===
-        texture.flipY = true;
-
-        // === OFFSET/POSITION ===
-        texture.offset.set(TEXTURE_OFFSETS.bottom.x, TEXTURE_OFFSETS.bottom.y);
-
-        console.log('═══════════════════════════════════════');
-        console.log('BOTTOM PANEL TEXTURE (Pattern_4474)');
-        console.log('═══════════════════════════════════════');
-        console.log('Texture Properties:');
-        console.log(`  - wrapS: ${texture.wrapS === THREE.ClampToEdgeWrapping ? 'ClampToEdgeWrapping' : texture.wrapS === THREE.RepeatWrapping ? 'RepeatWrapping' : 'MirroredRepeatWrapping'}`);
-        console.log(`  - wrapT: ${texture.wrapT === THREE.ClampToEdgeWrapping ? 'ClampToEdgeWrapping' : texture.wrapT === THREE.RepeatWrapping ? 'RepeatWrapping' : 'MirroredRepeatWrapping'}`);
-        console.log(`  - repeat: (${texture.repeat.x}, ${texture.repeat.y})`);
-        console.log(`  - offset: (${texture.offset.x}, ${texture.offset.y})`);
-        console.log(`  - rotation: ${texture.rotation} radians (${(texture.rotation * 180 / Math.PI).toFixed(1)}°)`);
-        console.log(`  - center: (${texture.center.x}, ${texture.center.y})`);
-        console.log(`  - flipY: ${texture.flipY}`);
-
-        textureCache['bottom'] = texture;
-      }
+          textureCache[panelConfig.id] = texture;
+        }
+      });
 
       // Load the 3D model
       loader.load(objURL, obj => {
@@ -1994,17 +2121,29 @@ async function savetoS3(fabricTextures, rawTextures){
         });
         console.log("All mesh names in OBJ:", meshNames);
 
-        let pattern25178Count = 0;
-        let pattern4474Count = 0;
+        // Build a mapping from objPart name to panel config and texture
+        const objPartToPanel = {};
+        const partInstanceCounts = {};
+        CURRENT_BAG_CONFIG.panels.forEach(panelConfig => {
+          objPartToPanel[panelConfig.objPart] = {
+            config: panelConfig,
+            texture: textureCache[panelConfig.id]
+          };
+          partInstanceCounts[panelConfig.objPart] = 0;
+        });
 
         obj.traverse(child => {
           if (child.isMesh) {
             const config = BODY_MATERIAL_MAP[child.name];
+            const panelMapping = objPartToPanel[child.name];
 
-            if (child.name === "Pattern_25178") {
-              pattern25178Count++;
-              if (textureCache['external']) {
-                console.log(`\n✓ Applying EXTERNAL texture to Pattern_25178 (instance ${pattern25178Count})`);
+            // Check if this mesh corresponds to a customizable panel
+            if (panelMapping) {
+              partInstanceCounts[child.name]++;
+              const instanceNum = partInstanceCounts[child.name];
+
+              if (panelMapping.texture) {
+                console.log(`\n✓ Applying ${panelMapping.config.label.toUpperCase()} texture to ${child.name} (instance ${instanceNum})`);
 
                 // Log mesh geometry info
                 console.log(`  Mesh Info:`);
@@ -2037,57 +2176,13 @@ async function savetoS3(fabricTextures, rawTextures){
                 console.log(`      Size: (${(bbox.max.x - bbox.min.x).toFixed(2)}, ${(bbox.max.y - bbox.min.y).toFixed(2)}, ${(bbox.max.z - bbox.min.z).toFixed(2)})`);
 
                 child.material = new THREE.MeshStandardMaterial({
-                  map: textureCache['external'],
+                  map: panelMapping.texture,
                   roughness: 0.8,
                   metalness: 0.0
                 });
               } else {
-                console.log(`✗ No external texture available for Pattern_25178`);
+                console.log(`✗ No texture available for ${child.name}`);
                 child.material = new THREE.MeshStandardMaterial({ color: 0xff0000 }); // Red for debugging
-              }
-            } else if (child.name === "Pattern_4474") {
-              pattern4474Count++;
-              if (textureCache['bottom']) {
-                console.log(`\n✓ Applying BOTTOM texture to Pattern_4474 (instance ${pattern4474Count})`);
-
-                // Log mesh geometry info
-                console.log(`  Mesh Info:`);
-                console.log(`    - Vertices: ${child.geometry.attributes.position.count}`);
-                console.log(`    - Faces: ${child.geometry.index ? child.geometry.index.count / 3 : 'N/A'}`);
-                console.log(`    - Has UV mapping: ${!!child.geometry.attributes.uv}`);
-                if (child.geometry.attributes.uv) {
-                  const uvArray = child.geometry.attributes.uv.array;
-                  console.log(`    - UV coordinates count: ${uvArray.length / 2}`);
-
-                  // Calculate UV min/max without spread operator (avoids stack overflow)
-                  let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
-                  for (let i = 0; i < uvArray.length; i += 2) {
-                    const u = uvArray[i];
-                    const v = uvArray[i + 1];
-                    if (u < minU) minU = u;
-                    if (u > maxU) maxU = u;
-                    if (v < minV) minV = v;
-                    if (v > maxV) maxV = v;
-                  }
-                  console.log(`    - UV range: U[${minU.toFixed(3)}, ${maxU.toFixed(3)}], V[${minV.toFixed(3)}, ${maxV.toFixed(3)}]`);
-                }
-
-                // Calculate mesh bounds
-                child.geometry.computeBoundingBox();
-                const bbox = child.geometry.boundingBox;
-                console.log(`    - Bounding box:`);
-                console.log(`      Min: (${bbox.min.x.toFixed(2)}, ${bbox.min.y.toFixed(2)}, ${bbox.min.z.toFixed(2)})`);
-                console.log(`      Max: (${bbox.max.x.toFixed(2)}, ${bbox.max.y.toFixed(2)}, ${bbox.max.z.toFixed(2)})`);
-                console.log(`      Size: (${(bbox.max.x - bbox.min.x).toFixed(2)}, ${(bbox.max.y - bbox.min.y).toFixed(2)}, ${(bbox.max.z - bbox.min.z).toFixed(2)})`);
-
-                child.material = new THREE.MeshStandardMaterial({
-                  map: textureCache['bottom'],
-                  roughness: 0.8,
-                  metalness: 0.0
-                });
-              } else {
-                console.log(`✗ No bottom texture available for Pattern_4473`);
-                child.material = new THREE.MeshStandardMaterial({ color: 0x00ff00 }); // Green for debugging
               }
             } else if (config) {
               // User has explicitly configured this mesh
@@ -2110,8 +2205,11 @@ async function savetoS3(fabricTextures, rawTextures){
           }
         });
 
-        console.log(`Found ${pattern25178Count} instances of Pattern_25178`);
-        console.log(`Found ${pattern4474Count} instances of Pattern_4474`);
+        // Log summary of applied textures
+        console.log('\n=== Texture Application Summary ===');
+        Object.entries(partInstanceCounts).forEach(([partName, count]) => {
+          console.log(`Found ${count} instances of ${partName}`);
+        });
 
         // Center camera on model
         const bbox = new THREE.Box3().setFromObject(obj);
