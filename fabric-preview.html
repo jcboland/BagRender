@@ -1102,11 +1102,29 @@
       const addToCartBtn = document.getElementById('add-to-cart-btn');
       if (addToCartBtn) {
         addToCartBtn.addEventListener('click', () => {
-          // Scroll smoothly to the top of the page
+          // Scroll smoothly to the top of the page (works in iframe)
           window.scrollTo({
             top: 0,
             behavior: 'smooth'
           });
+          window.parent.postMessage({ action: 'scrollToTop' }, '*');
+
+          // Also scroll the document element (for better browser compatibility)
+          document.documentElement.scrollTop = 0;
+          document.body.scrollTop = 0;
+
+          // If inside an iframe, try to scroll the parent window
+          try {
+            if (window.parent && window.parent !== window) {
+              window.parent.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+              });
+            }
+          } catch (e) {
+            // Cross-origin iframes will throw an error, which is fine
+            console.log('Cannot scroll parent window (cross-origin iframe)');
+          }
         });
       }
 
