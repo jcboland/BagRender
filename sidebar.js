@@ -182,34 +182,63 @@ function loadImageWithCORS(imageUrl, withCORS) {
     const currentPanelName = window.currentPanel || 'external';
     console.log('Current panel:', currentPanelName);
 
-    // Access the fabricPanels object from the main script
-    if (window.fabricPanels && window.fabricPanels[currentPanelName]) {
-      const panel = window.fabricPanels[currentPanelName];
-      console.log('Panel config:', panel);
+    // Access the fabricPanels object and helper functions from the main script
+    if (window.fabricPanels) {
+      // Check if helper functions exist (from fabric-preview.html)
+      if (typeof window.applyImageToPanel === 'function' && typeof window.anyPanelsHaveImages === 'function') {
+        // Use the helper functions for consistent behavior
+        const hasImages = window.anyPanelsHaveImages();
 
-      panel.image = img;
-
-      // Scale the image to fill the entire canvas (cover mode)
-      const imageAspect = img.width / img.height;
-      const canvasAspect = panel.svgWidth / panel.svgHeight;
-
-      if (imageAspect > canvasAspect) {
-        // Image is wider - fit to height (fill vertically)
-        panel.scale = panel.svgHeight / img.height;
+        if (hasImages) {
+          // If panels have images, only update the current panel
+          window.applyImageToPanel(img, currentPanelName);
+          console.log(`Applied image to current panel: ${currentPanelName}`);
+        } else {
+          // If no panels have images, apply to all empty panels
+          let appliedCount = 0;
+          for (const [key, panel] of Object.entries(window.fabricPanels)) {
+            if (!panel.image) {
+              window.applyImageToPanel(img, key);
+              appliedCount++;
+            }
+          }
+          console.log(`Applied image to ${appliedCount} empty panels`);
+        }
       } else {
-        // Image is taller - fit to width (fill horizontally)
-        panel.scale = panel.svgWidth / img.width;
+        // Fallback to old behavior if helper functions don't exist
+        const panel = window.fabricPanels[currentPanelName];
+        if (panel) {
+          console.log('Panel config:', panel);
+
+          panel.image = img;
+
+          // Scale the image to fill the entire canvas (cover mode)
+          const imageAspect = img.width / img.height;
+          const canvasAspect = panel.svgWidth / panel.svgHeight;
+
+          if (imageAspect > canvasAspect) {
+            // Image is wider - fit to height (fill vertically)
+            panel.scale = panel.svgHeight / img.height;
+          } else {
+            // Image is taller - fit to width (fill horizontally)
+            panel.scale = panel.svgWidth / img.width;
+          }
+
+          // Center the image
+          panel.x = (panel.svgWidth - img.width * panel.scale) / 2;
+          panel.y = (panel.svgHeight - img.height * panel.scale) / 2;
+
+          console.log('Image positioning:', {
+            scale: panel.scale,
+            x: panel.x,
+            y: panel.y
+          });
+
+          console.log('Image applied to', currentPanelName, 'panel');
+        } else {
+          console.error('Could not access fabric panel:', currentPanelName);
+        }
       }
-
-      // Center the image
-      panel.x = (panel.svgWidth - img.width * panel.scale) / 2;
-      panel.y = (panel.svgHeight - img.height * panel.scale) / 2;
-
-      console.log('Image positioning:', {
-        scale: panel.scale,
-        x: panel.x,
-        y: panel.y
-      });
 
       // Trigger re-render if the function exists
       if (window.render2DCanvas) {
@@ -220,15 +249,13 @@ function loadImageWithCORS(imageUrl, withCORS) {
         console.error('render2DCanvas function not found on window object');
       }
 
-      console.log('Image applied to', currentPanelName, 'panel');
-
       // Warn user if loaded without CORS
       if (!withCORS) {
         console.warn('⚠️ Image loaded without CORS. 3D preview export will fail with "tainted canvas" error.');
         alert('Image loaded successfully!\n\nNote: The S3 CORS configuration may not be working yet. You can view the 2D preview, but generating the 3D preview may fail. Try clearing your browser cache or wait a few minutes for CORS to propagate.');
       }
     } else {
-      console.error('Could not access fabric panel:', currentPanelName);
+      console.error('Could not access fabricPanels');
       console.log('window.fabricPanels:', window.fabricPanels);
       console.log('window.currentPanel:', window.currentPanel);
     }

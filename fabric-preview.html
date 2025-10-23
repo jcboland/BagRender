@@ -544,11 +544,9 @@
         </div>
 
         <button id="generate-btn" >Preview Design</button>
-        <div id="bag-id-display" style="display: none;">
-          <span style="font-size: 12px; color: #666;">Bag ID:</span>
-          <span id="bag-id-value" style="font-size: 13px; font-weight: 600; color: #507CBC; margin-left: 5px;"></span>
-        </div>
-        <button id="add-to-cart-btn" style="display: none;">Add to Cart</button>
+        <button id="add-to-cart-btn" style="display: none;">Approve Design</button>
+        
+        
       </div>
 
       <div id="canvas-container">
@@ -557,6 +555,10 @@
           Drag to move • Scroll to zoom
         </div>
       </div>
+      <div id="bag-id-display" style="display: none;">
+          <span style="font-size: 12px; color: #666;">Bag ID:</span>
+          <span id="bag-id-value" style="font-size: 13px; font-weight: 600; color: #507CBC; margin-left: 5px;"></span>
+        </div>
       <!-- <div class="load-bag-section">
             <label for="load-bag-input">Load Saved Bag:</label>
             <div class="load-bag-controls">
@@ -1332,6 +1334,37 @@
       });
     }
 
+    // Helper function to apply an image to a specific panel
+    function applyImageToPanel(img, panelKey) {
+      const panel = fabricPanels[panelKey];
+      panel.image = img;
+
+      // Scale the image to fill the entire canvas (cover mode)
+      const imageAspect = img.width / img.height;
+      const canvasAspect = panel.svgWidth / panel.svgHeight;
+
+      if (imageAspect > canvasAspect) {
+        // Image is wider - fit to height (fill vertically)
+        panel.scale = panel.svgHeight / img.height;
+      } else {
+        // Image is taller - fit to width (fill horizontally)
+        panel.scale = panel.svgWidth / img.width;
+      }
+
+      // Center the image
+      panel.x = (panel.svgWidth - img.width * panel.scale) / 2;
+      panel.y = (panel.svgHeight - img.height * panel.scale) / 2;
+    }
+
+    // Helper function to check if any panels have images
+    function anyPanelsHaveImages() {
+      return Object.values(fabricPanels).some(panel => panel.image !== null);
+    }
+
+    // Expose helper functions globally for sidebar.js
+    window.applyImageToPanel = applyImageToPanel;
+    window.anyPanelsHaveImages = anyPanelsHaveImages;
+
     function handleFabricImageUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -1340,24 +1373,24 @@
       reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-          const panel = fabricPanels[currentPanel];
-          panel.image = img;
+          // Check if any panels already have images
+          const hasImages = anyPanelsHaveImages();
 
-          // Scale the image to fill the entire canvas (cover mode)
-          const imageAspect = img.width / img.height;
-          const canvasAspect = panel.svgWidth / panel.svgHeight;
-
-          if (imageAspect > canvasAspect) {
-            // Image is wider - fit to height (fill vertically)
-            panel.scale = panel.svgHeight / img.height;
+          if (hasImages) {
+            // If panels have images, only update the current panel
+            applyImageToPanel(img, currentPanel);
+            console.log(`Applied image to current panel: ${currentPanel}`);
           } else {
-            // Image is taller - fit to width (fill horizontally)
-            panel.scale = panel.svgWidth / img.width;
+            // If no panels have images, apply to all empty panels
+            let appliedCount = 0;
+            for (const [key, panel] of Object.entries(fabricPanels)) {
+              if (!panel.image) {
+                applyImageToPanel(img, key);
+                appliedCount++;
+              }
+            }
+            console.log(`Applied image to ${appliedCount} empty panels`);
           }
-
-          // Center the image
-          panel.x = (panel.svgWidth - img.width * panel.scale) / 2;
-          panel.y = (panel.svgHeight - img.height * panel.scale) / 2;
 
           render2DCanvas();
         };
