@@ -876,8 +876,8 @@
       // Report the Bag ID number
       console.log("Bag ID: " + bagID);
       console.log("Bag ID Setting: " + bagID);
-      // localStorage.setItem('bagID', bagID);
-      // window.parent.postMessage({ key: 'bagID', value: bagID }, '*');
+      localStorage.setItem('bagID', bagID);
+      window.parent.postMessage({ key: 'bagID', value: bagID }, '*');
 
       // Also expose to global scope for external access
       window.bagID = bagID;
@@ -1990,9 +1990,10 @@ async function savetoS3(fabricTextures, rawTextures){
     // Generate 3D Preview with positioned fabric textures
     async function generatePreview() {
       console.log("Generating 3D Preview...");
+      console.log("Posting BagID: " + bagID);
       localStorage.setItem('bagID', bagID);
       window.parent.postMessage({ key: 'bagID', value: bagID }, '*');
-      
+
       // Display Bag ID
       const bagIdDisplay = document.getElementById('bag-id-display');
       const bagIdValue = document.getElementById('bag-id-value');
